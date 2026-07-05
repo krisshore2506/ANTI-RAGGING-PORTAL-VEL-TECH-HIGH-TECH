@@ -313,13 +313,9 @@ def send_otp():
 
 # ================= OTP PAGE (GET) =================
 @app.route("/verify_otp", methods=["GET"])
+@app.route("/verify_otp", methods=["GET"])
 def verify_otp_page():
-    demo_otp = session.get("otp") if DEMO_OTP_MODE else None
-    return render_template(
-        "verify_otp.html",
-        email=session.get("email"),
-        demo_otp=demo_otp
-    )
+    return render_template("verify_otp.html", email=session.get("email"))
 
 
 # ================= VERIFY OTP (POST) =================
@@ -333,13 +329,8 @@ def verify_otp():
         session["verified"] = True
         return redirect(url_for("student_dashboard"))
 
-    flash("Invalid OTP. Please try again.", "error")
-    demo_otp = session.get("otp") if DEMO_OTP_MODE else None
-    return render_template(
-        "verify_otp.html",
-        email=email,
-        demo_otp=demo_otp
-    )
+    fflash("Invalid OTP. Please try again.", "error")
+return render_template("verify_otp.html", email=email)
 
 
 # ================= RESEND OTP =================
