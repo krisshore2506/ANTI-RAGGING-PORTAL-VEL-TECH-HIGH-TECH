@@ -1,0 +1,150 @@
+/* =====================================================
+   TRACK COMPLAINT PAGE — BLUE & WHITE GLOW (SCOPED)
+   ===================================================== */
+
+.track-page {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at top, rgba(30,136,201,0.12), transparent 60%),
+        #f9fbfd;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* ---------- Logo ---------- */
+.track-logo {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.track-logo img {
+    height: 120px;
+    width: auto;
+}
+
+/* ---------- Back Link ---------- */
+.track-back {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.track-back a {
+    display: inline-block;
+    text-decoration: none;
+    font-size: 14px;
+    background: #1e88c9;
+    color: #ffffff;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: background 0.3s ease;
+}
+
+.track-back a:hover {
+    background: #0f4c81;
+}
+
+/* ---------- Track Box ---------- */
+.track-box {
+    max-width: 500px;
+    margin: 50px auto;
+    background: #ffffff;
+    padding: 32px;
+    border-radius: 18px;
+    text-align: left;
+
+    /* BLUE-WHITE GLOW */
+    box-shadow:
+        0 14px 35px rgba(15, 76, 129, 0.15),
+        0 0 24px rgba(30, 136, 201, 0.12);
+}
+
+.track-box h2 {
+    text-align: center;
+    margin-bottom: 22px;
+    color: #0f4c81;
+}
+
+/* ---------- Form ---------- */
+.track-box label {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.track-box input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    margin-bottom: 18px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.track-box button {
+    width: 100%;
+    padding: 13px;
+    font-size: 16px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    background-color: #1e88c9;
+    color: #ffffff;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+
+    /* GLOW */
+    box-shadow: 0 0 14px rgba(30, 136, 201, 0.45);
+}
+
+.track-box button:hover {
+    background-color: #0f4c81;
+    box-shadow: 0 0 20px rgba(30, 136, 201, 0.65);
+}
+
+/* ---------- Status ---------- */
+.track-status {
+    font-weight: 700;
+    color: #16a34a;
+}
+
+/* ---------- Error ---------- */
+.track-error {
+    margin-top: 20px;
+    font-weight: 600;
+    color: #dc2626;
+    text-align: center;
+}
+/* ---------- Status Badges ---------- */
+.track-status {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-block;
+}
+
+/* Open */
+.status-open {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+/* In Progress */
+.status-in-progress {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+/* Closed */
+.status-closed {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+/* Resolved (alias of closed if you use it) */
+.status-resolved {
+    background-color: #dcfce7;
+    color: #166534;
+}
+

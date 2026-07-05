@@ -1,0 +1,329 @@
+/* ==========================================================================
+   EDUSORT LANDING PAGE CSS (landing.css)
+   ========================================================================== */
+
+.landing-body {
+  background: radial-gradient(circle at 10% 20%, rgba(243, 248, 255, 1) 0%, rgba(250, 252, 255, 1) 90%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Navbar */
+.landing-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 8%;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.brand-logo-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.brand-logo-block img {
+  height: 42px;
+  width: auto;
+  border-radius: var(--radius-sm);
+}
+
+.brand-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: -0.5px;
+}
+
+.nav-actions {
+  display: flex;
+  gap: 15px;
+}
+
+/* Hero Section */
+.hero-section {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 40px;
+  padding: 80px 8% 60px;
+  align-items: center;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.hero-content {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.hero-tag {
+  display: inline-block;
+  background-color: var(--accent-light);
+  color: var(--primary-dark);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 6px 16px;
+  border-radius: 99px;
+  margin-bottom: 20px;
+  border: 1px solid var(--accent);
+}
+
+.hero-title {
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--primary-dark);
+  margin-bottom: 20px;
+  letter-spacing: -1px;
+}
+
+.hero-title span {
+  background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-subtitle {
+  font-size: 18px;
+  color: var(--text-muted);
+  margin-bottom: 35px;
+  line-height: 1.6;
+}
+
+.hero-ctas {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.hero-image-block {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  animation: fadeIn 0.8s ease-out;
+}
+
+.hero-illustration {
+  background: linear-gradient(135deg, var(--accent-light), #ffffff);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  box-shadow: var(--shadow-premium);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 380px;
+  transition: var(--transition);
+}
+
+.hero-illustration:hover {
+  transform: translateY(-5px);
+}
+
+.hero-illustration-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  animation: pulse 3s infinite ease-in-out;
+}
+
+.hero-illustration h3 {
+  color: var(--primary-dark);
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.hero-illustration p {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* Feature Grid Section */
+.features-section {
+  padding: 60px 8%;
+  background-color: #ffffff;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.section-header {
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto 50px;
+}
+
+.section-header h2 {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--primary-dark);
+  margin-bottom: 15px;
+}
+
+.section-header p {
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.feature-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 30px;
+  transition: var(--transition);
+  cursor: default;
+}
+
+.feature-card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--accent);
+  background: #ffffff;
+}
+
+.feature-icon {
+  font-size: 32px;
+  margin-bottom: 15px;
+  color: var(--primary);
+  display: inline-block;
+  background-color: var(--accent-light);
+  width: 60px;
+  height: 60px;
+  line-height: 60px;
+  text-align: center;
+  border-radius: 50%;
+}
+
+.feature-card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin-bottom: 12px;
+}
+
+.feature-card p {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* Steps Section */
+.steps-section {
+  padding: 80px 8%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.steps-timeline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 30px;
+  position: relative;
+  margin-top: 40px;
+}
+
+.step-item {
+  text-align: center;
+  position: relative;
+}
+
+.step-num {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, var(--primary-light), var(--primary));
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 50px;
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  box-shadow: 0 4px 10px rgba(30, 64, 175, 0.2);
+}
+
+.step-item h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin-bottom: 10px;
+}
+
+.step-item p {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Footer styling */
+.landing-footer {
+  margin-top: auto;
+  background-color: var(--primary-dark);
+  color: #ffffff;
+  padding: 40px 8% 30px;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.landing-footer-grid {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.landing-footer-brand h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.landing-footer-brand p {
+  color: var(--accent-light);
+  font-size: 12px;
+}
+
+.landing-footer-copy {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Responsive fixes */
+@media(max-width: 992px) {
+  .hero-section {
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding-top: 40px;
+  }
+  .hero-title {
+    font-size: 36px;
+  }
+  .hero-ctas {
+    justify-content: center;
+  }
+  .hero-image-block {
+    margin-top: 30px;
+  }
+  .landing-footer-grid {
+    flex-direction: column;
+    text-align: center;
+  }
+}

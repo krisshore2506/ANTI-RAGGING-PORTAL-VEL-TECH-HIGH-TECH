@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cleaning Logs & Alerts - EduSort</title>
+    
+    <!-- Link styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body class="admin-body">
+
+    <div class="admin-layout">
+        
+        <!-- Admin Navbar -->
+        <nav class="admin-navbar">
+            <a href="/" class="admin-brand">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="EduSort Logo">
+                <div class="admin-brand-title">
+                    <h1>EduSort</h1>
+                    <span>College Administration Room</span>
+                </div>
+            </a>
+            <div class="admin-nav-actions">
+                <a href="{{ url_for('admin') }}" class="admin-nav-btn">⬅ Back to Dashboard</a>
+                <a href="/admin_logout" class="admin-nav-btn" style="border-color: #ef4444; color: #fca5a5;">🚪 Logout</a>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="admin-main">
+            
+            <h2 class="admin-page-title">🧹 Cleaning Alerts & Communication Logs</h2>
+
+            <!-- Filter Logs Form -->
+            <section class="filter-box" style="margin-bottom: 30px;">
+                <div class="filter-left">
+                    <form method="GET" style="display: flex; gap: 15px; align-items: center;">
+                        <div class="filter-control-wrap">
+                            <label for="status-select">Filter by Complaint Status:</label>
+                            <select id="status-select" name="status" class="filter-select" onchange="this.form.submit()">
+                                <option value="">All Statuses</option>
+                                <option value="Open" {% if request.args.get('status') == 'Open' %}selected{% endif %}>Open</option>
+                                <option value="In-Progress" {% if request.args.get('status') == 'In-Progress' %}selected{% endif %}>In-Progress</option>
+                                <option value="Resolved" {% if request.args.get('status') == 'Resolved' %}selected{% endif %}>Resolved</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- SMS Logs Section -->
+            <section class="container-box" style="margin-bottom: 40px; padding: 25px;">
+                <h3 class="log-section-title">📩 Dispatched Cleaner SMS Logs</h3>
+                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Review automated alerts dispatched to cleaning personnel upon AI categorization.</p>
+                
+                {% if sms_logs %}
+                    <div class="table-responsive">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Log ID</th>
+                                    <th>Complaint ID</th>
+                                    <th>Recipient Phone</th>
+                                    <th>SMS Content Preview</th>
+                                    <th>Dispatch Status</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sms in sms_logs %}
+                                    <tr>
+                                        <td style="font-weight: 600;">#{{ sms.id }}</td>
+                                        <td style="font-weight: 700; color: var(--primary-light);">#{{ sms.complaint_id }}</td>
+                                        <td>{{ sms.to_number }}</td>
+                                        <td style="font-size: 13px; max-width: 350px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" title="{{ sms.message }}">
+                                            {{ sms.message }}
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-resolved" style="background-color: #ecfdf5; color: #10b981;">
+                                                {{ sms.status }}
+                                            </span>
+                                        </td>
+                                        <td style="font-size: 13px; color: var(--text-muted);">
+                                            {{ sms.timestamp.strftime('%d %b %Y, %H:%M') if sms.timestamp and not sms.timestamp is string else sms.timestamp }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <span class="empty-icon">📩</span>
+                        <h3>No SMS logs recorded</h3>
+                        <p>No automated text dispatches have occurred recently.</p>
+                    </div>
+                {% endif %}
+            </section>
+
+            <!-- Call Logs Section -->
+            <section class="container-box" style="padding: 25px;">
+                <h3 class="log-section-title">📞 Automated Escalation Call Logs</h3>
+                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Escalation levels increase based on unsuccessful contact attempts to assigned area cleaners.</p>
+
+                {% if call_logs %}
+                    <div class="table-responsive">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Log ID</th>
+                                    <th>Complaint ID</th>
+                                    <th>Assigned Cleaner</th>
+                                    <th>Phone Number</th>
+                                    <th>Call Connection Status</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for call in call_logs %}
+                                    <tr>
+                                        <td style="font-weight: 600;">#{{ call.id }}</td>
+                                        <td style="font-weight: 700; color: var(--primary-light);">#{{ call.complaint_id }}</td>
+                                        <td style="font-weight: 600;">🧹 {{ call.cleaner_name }}</td>
+                                        <td>{{ call.phone_number }}</td>
+                                        <td>
+                                            <form method="POST" action="{{ url_for('update_call_status') }}" style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                                                <input type="hidden" name="call_id" value="{{ call.id }}">
+                                                
+                                                <select name="call_status" class="filter-select" style="padding: 4px 8px; font-size: 12px;">
+                                                    <option {% if call.call_status == "Triggered" %}selected{% endif %}>Triggered</option>
+                                                    <option {% if call.call_status == "Connected" %}selected{% endif %}>Connected</option>
+                                                    <option {% if call.call_status == "Not Reachable" %}selected{% endif %}>Not Reachable</option>
+                                                    <option {% if call.call_status == "Switched Off" %}selected{% endif %}>Switched Off</option>
+                                                </select>
+                                                
+                                                <button type="submit" class="btn-primary" style="padding: 5px 10px; font-size: 11px; width: auto;">Update</button>
+                                            </form>
+                                        </td>
+                                        <td style="font-size: 13px; color: var(--text-muted);">
+                                            {{ call.timestamp.strftime('%d %b %Y, %H:%M') if call.timestamp and not call.timestamp is string else call.timestamp }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <span class="empty-icon">📞</span>
+                        <h3>No Call logs recorded</h3>
+                        <p>No automated IVR/call trigger attempts have occurred.</p>
+                    </div>
+                {% endif %}
+            </section>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="admin-footer">
+            Powered by <b>EduSort AI Portal</b> | Vel Tech High Tech Engineering College | © 2026
+        </footer>
+
+    </div>
+
+</body>
+</html>

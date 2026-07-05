@@ -1,0 +1,95 @@
+/* =====================================================
+   INDEX (FIRST) PAGE — BLUE + WHITE THEME (SCOPED)
+   ===================================================== */
+
+.index-page {
+    background:
+        radial-gradient(circle at top, rgba(30,136,201,0.12), transparent 60%),
+        #f9fbfd;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+
+/* ---------- Logo ---------- */
+.index-logo {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.index-logo img {
+    height: 120px;
+    width: auto;
+}
+
+/* ---------- Title ---------- */
+.index-header-title {
+    font-size: 40px;
+    font-weight: bold;
+    text-align: center;
+    padding: 22px;
+    background: linear-gradient(90deg, #1e88c9, #0f4c81);
+    color: #ffffff;
+    margin-top: 15px;
+}
+
+/* ---------- Container ---------- */
+.index-container {
+    max-width: 400px;
+    margin: 50px auto;
+    background: #ffffff;
+    padding: 32px;
+    border-radius: 16px;
+    text-align: center;
+
+    /* SOFT BLUE-WHITE GLOW */
+    box-shadow:
+        0 12px 30px rgba(15, 76, 129, 0.15),
+        0 0 20px rgba(30, 136, 201, 0.12);
+}
+
+
+.index-container h2 {
+    margin-bottom: 22px;
+    color: #0f4c81;
+    font-weight: 600;
+}
+
+/* ---------- Buttons ---------- */
+.index-container button {
+    width: 100%;
+    padding: 13px;
+    margin-bottom: 16px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background-color: #1e88c9;
+    color: #ffffff;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+
+    box-shadow: 0 0 10px rgba(30, 136, 201, 0.25);
+}
+
+
+.index-container button:hover {
+    background-color: #0f4c81;
+}
+
+/* ---------- Admin Button ---------- */
+.index-container .admin-btn {
+    background-color: #0f4c81;
+}
+
+.index-container .admin-btn:hover {
+    background-color: #08365c;
+}
+
+/* ---------- Footer ---------- */
+.index-footer {
+    text-align: center;
+    font-size: 13px;
+    margin: 40px 0;
+    color: #4b5563;
+}

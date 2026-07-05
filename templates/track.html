@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Complaint - EduSort</title>
+    
+    <!-- Link styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body class="dashboard-layout">
+
+    <!-- Header Navbar -->
+    <header class="dashboard-header">
+        <a href="/" class="header-brand">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="EduSort Logo">
+            <h1>EduSort</h1>
+        </a>
+        <div class="header-user">
+            <a href="/student_dashboard" class="btn-secondary" style="padding: 6px 14px; font-size: 13px;">👨‍🎓 Dashboard</a>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="dashboard-main" style="max-width: 800px;">
+        
+        <!-- Track Box Search -->
+        <div class="container-box" style="margin-bottom: 35px;">
+            <h2 style="font-size: 20px; font-weight: 700; color: var(--primary-dark); margin-bottom: 20px;">Track Grievance Resolution</h2>
+            
+            <form method="POST" action="/track" style="display: flex; gap: 12px; align-items: flex-end;">
+                <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <label for="id-input">Enter Complaint Ticket ID</label>
+                    <input 
+                        type="number" 
+                        id="id-input" 
+                        class="form-control" 
+                        name="complaint_id" 
+                        placeholder="e.g. 1024" 
+                        value="{{ complaint.id if complaint else '' }}"
+                        required
+                    >
+                </div>
+                <button type="submit" class="btn-primary" style="height: 46px;">Track Progress</button>
+            </form>
+        </div>
+
+        <!-- Result Display Section -->
+        {% if complaint %}
+            <div class="container-box">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 25px;">
+                    <div>
+                        <span class="user-email" style="font-size: 12px; font-weight: 700; background-color: var(--accent-light); color: var(--primary);">TICKET ID #{{ complaint.id }}</span>
+                        <h2 style="font-size: 22px; font-weight: 700; color: var(--primary-dark); margin-top: 8px; margin-bottom: 4px;">{{ complaint.complaint_title or "General Grievance" }}</h2>
+                        <span style="font-size: 13px; color: var(--text-muted);">Submitted by: <strong>{{ complaint.student_email }}</strong></span>
+                    </div>
+                    
+                    <div style="text-align: right;">
+                        <span class="badge badge-{{ complaint.status|lower|replace(' ', '-') }}" style="font-size: 14px; padding: 6px 14px;">
+                            {{ complaint.status }}
+                        </span>
+                        {% if complaint.escalation_level and complaint.escalation_level > 0 %}
+                            <div style="margin-top: 6px;">
+                                <span class="badge badge-escalated" style="font-size: 11px; padding: 3px 8px;">🚨 Escalation Level {{ complaint.escalation_level }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Stepper Progress Timeline -->
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 25px;">Resolution Timeline</h3>
+                
+                <!-- Status values checking to activate timeline steps -->
+                {% set status = complaint.status|lower %}
+                {% set step_idx = 0 %}
+                
+                {% if status == 'open' %}
+                    {% set step_idx = 1 %}
+                {% elif status == 'assigned' %}
+                    {% set step_idx = 2 %}
+                {% elif status == 'in-progress' %}
+                    {% set step_idx = 3 %}
+                {% elif status == 'resolved' or status == 'closed' %}
+                    {% set step_idx = 4 %}
+                {% endif %}
+
+                <div class="timeline-stepper">
+                    <!-- Progress Line -->
+                    <div class="timeline-progress-bar" style="width: {{ ((step_idx - 1) / 3 * 100)|round }}%;"></div>
+                    
+                    <!-- Step 1: Submitted -->
+                    <div class="timeline-step {% if step_idx >= 1 %}active{% endif %} {% if step_idx > 1 %}completed{% endif %}">
+                        <div class="step-node">{% if step_idx > 1 %}✓{% else %}1{% endif %}</div>
+                        <span class="step-label">Submitted</span>
+                    </div>
+                    
+                    <!-- Step 2: Assigned -->
+                    <div class="timeline-step {% if step_idx >= 2 %}active{% endif %} {% if step_idx > 2 %}completed{% endif %}">
+                        <div class="step-node">{% if step_idx > 2 %}✓{% else %}2{% endif %}</div>
+                        <span class="step-label">Assigned</span>
+                    </div>
+                    
+                    <!-- Step 3: In Progress -->
+                    <div class="timeline-step {% if step_idx >= 3 %}active{% endif %} {% if step_idx > 3 %}completed{% endif %}">
+                        <div class="step-node">{% if step_idx > 3 %}✓{% else %}3{% endif %}</div>
+                        <span class="step-label">In Progress</span>
+                    </div>
+                    
+                    <!-- Step 4: Resolved -->
+                    <div class="timeline-step {% if step_idx >= 4 %}active{% endif %} {% if step_idx > 4 %}completed{% endif %}">
+                        <div class="step-node">{% if step_idx > 4 %}✓{% else %}4{% endif %}</div>
+                        <span class="step-label">Resolved</span>
+                    </div>
+                </div>
+
+                <!-- Complaint Text Detail -->
+                <div style="margin-top: 30px; padding: 20px; background-color: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md);">
+                    <h4 style="font-size: 14px; color: var(--primary-dark); font-weight: 700; margin-bottom: 8px; text-transform: uppercase;">Complaint Text</h4>
+                    <p style="font-size: 14px; color: var(--text); line-height: 1.6; white-space: pre-line;">{{ complaint.complaint_text }}</p>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+                    <div>
+                        <p style="font-size: 14px; margin-bottom: 6px;"><strong>Routed Department:</strong> {{ complaint.department }}</p>
+                        <p style="font-size: 14px; margin-bottom: 0;"><strong>Filed Date:</strong> {{ complaint.timestamp.strftime('%d %b %Y, %H:%M') if complaint.timestamp else 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p style="font-size: 14px; margin-bottom: 6px;"><strong>Assigned Resolver:</strong> {{ complaint.assigned_cleaner or 'N/A (AI Routed)' }}</p>
+                        <p style="font-size: 14px; margin-bottom: 0;"><strong>Priority Level:</strong> <span class="prio-badge prio-{{ complaint.priority|lower if complaint.priority else 'medium' }}">{{ complaint.priority or 'Medium' }}</span></p>
+                    </div>
+                </div>
+
+                <!-- Admin Remarks Section -->
+                {% if complaint.admin_remarks %}
+                    <div class="remarks-card">
+                        <h4>💬 Resolver Remarks / Resolution Notes</h4>
+                        <p>{{ complaint.admin_remarks }}</p>
+                    </div>
+                {% else %}
+                    <div class="remarks-card" style="border-left-color: var(--border); background-color: #f8fafc;">
+                        <h4 style="color: var(--text-muted);">💬 Resolver Remarks</h4>
+                        <p style="color: var(--text-muted); font-style: italic;">No resolution remarks have been added yet by the resolver team.</p>
+                    </div>
+                {% endif %}
+
+            </div>
+        {% elif not_found %}
+            <div class="alert alert-error">
+                <span>❌ No complaint found matching the provided Ticket ID. Please verify the ID and try again.</span>
+            </div>
+        {% endif %}
+        
+    </main>
+
+    <!-- Footer -->
+    <footer class="dashboard-footer">
+        Powered by <b>EduSort AI</b> | Vel Tech High Tech Engineering College | © 2026
+    </footer>
+
+    <!-- Load scripts -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

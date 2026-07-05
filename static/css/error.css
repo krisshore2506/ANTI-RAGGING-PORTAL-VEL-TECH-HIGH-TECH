@@ -1,0 +1,76 @@
+/* =====================================================
+   ERROR PAGE — BLUE & WHITE GLOW (SCOPED)
+   ===================================================== */
+
+.error-page {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at top, rgba(30,136,201,0.15), transparent 60%),
+        #f9fbfd;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+}
+
+/* ---------- Logo ---------- */
+.error-logo {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.error-logo img {
+    height: 120px;
+    width: auto;
+}
+
+/* ---------- Error Box ---------- */
+.error-box {
+    background: #ffffff;
+    padding: 34px 44px;
+    border-radius: 18px;
+    text-align: center;
+    max-width: 520px;
+
+    /* BLUE-WHITE GLOW */
+    box-shadow:
+        0 14px 35px rgba(15, 76, 129, 0.18),
+        0 0 25px rgba(30, 136, 201, 0.15);
+}
+
+/* ---------- Title ---------- */
+.error-box h1 {
+    color: #0f4c81;
+    font-size: 28px;
+    margin-bottom: 14px;
+}
+
+/* ---------- Text ---------- */
+.error-box p {
+    font-size: 16px;
+    color: #374151;
+    line-height: 1.6;
+}
+
+/* ---------- Button ---------- */
+.error-btn {
+    display: inline-block;
+    margin-top: 22px;
+    padding: 12px 22px;
+    background-color: #1e88c9;
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 15px;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+
+    /* GLOW */
+    box-shadow: 0 0 14px rgba(30, 136, 201, 0.45);
+}
+
+.error-btn:hover {
+    background-color: #0f4c81;
+    box-shadow: 0 0 20px rgba(30, 136, 201, 0.65);
+}

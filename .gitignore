@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+flask_session/
+instance/
+.env
+*.pyc
+*.pyo
+*.pyd
+*.sqbpro
+complaints_backup_v1.db
+complaints.db
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/

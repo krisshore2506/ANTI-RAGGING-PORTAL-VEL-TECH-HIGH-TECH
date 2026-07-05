@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduSort - Submit Grievance</title>
+    
+    <!-- Link styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body class="dashboard-layout">
+
+    <!-- Header Navbar -->
+    <header class="dashboard-header">
+        <a href="/student_dashboard" class="header-brand">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="EduSort Logo">
+            <h1>EduSort</h1>
+        </a>
+        <div class="header-user">
+            <span class="user-email">👨‍🎓 {{ email }}</span>
+            <a href="/student_dashboard" class="btn-secondary" style="padding: 6px 14px; font-size: 13px;">⬅ Dashboard</a>
+        </div>
+    </header>
+
+    <!-- Main Content Form Container -->
+    <main class="dashboard-main" style="max-width: 750px;">
+        
+        <div class="container-box" style="padding: 40px;">
+            <h2 style="font-size: 22px; font-weight: 700; color: var(--primary-dark); margin-bottom: 8px;">Raise a New Grievance</h2>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;">Describe the issue clearly. Our AI will automatically categorize and assign the right resolver.</p>
+
+            <form method="POST" action="/predict" id="complaint-form">
+                
+                <!-- Complaint Title -->
+                <div class="form-group">
+                    <label for="title-input">Grievance Title / Subject</label>
+                    <input 
+                        type="text" 
+                        id="title-input" 
+                        class="form-control" 
+                        name="title" 
+                        placeholder="e.g. Water leakage in Block B toilet, Broken bench in Lab 2" 
+                        required
+                    >
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <!-- Location Selector -->
+                    <div class="form-group">
+                        <label for="location-select">Hostel / Campus Location</label>
+                        <select id="location-select" class="form-control" name="location">
+                            <option value="General">General / Other</option>
+                            <option value="Hostel Room">Hostel Room</option>
+                            <option value="Hostel Corridor">Hostel Corridor</option>
+                            <option value="Campus Lab">Campus Laboratory</option>
+                            <option value="Classroom">Classroom Block</option>
+                            <option value="Library">Library Building</option>
+                            <option value="Mess Hall">Mess Hall / Canteen</option>
+                        </select>
+                    </div>
+
+                    <!-- Priority Level -->
+                    <div class="form-group">
+                        <label for="priority-select">Grievance Priority</label>
+                        <select id="priority-select" class="form-control" name="priority">
+                            <option value="Low">Low</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Complaint Description -->
+                <div class="form-group">
+                    <label for="complaint-text-input">Detailed Description</label>
+                    <textarea 
+                        id="complaint-text-input" 
+                        class="form-control" 
+                        name="complaint" 
+                        rows="5" 
+                        placeholder="Kindly describe your complaints below in detail. Mention block, floor, or any specific tags if relevant…" 
+                        required
+                    ></textarea>
+                </div>
+
+                <!-- Hidden element used to combine inputs before submit -->
+                <input type="hidden" name="combined_text" id="hidden-combined-text">
+
+                <!-- Interactive AI Preview Panel -->
+                <div id="live-preview-box" class="remarks-card" style="display: none; margin-bottom: 25px; border-left-color: var(--accent);">
+                    <h4>🧠 AI Smart Routing Assistant</h4>
+                    <p style="font-size: 13px; margin-bottom: 8px; color: var(--text-muted);">Based on your description, this complaint will be classified as:</p>
+                    <span id="preview-category" class="badge">Checking...</span>
+                </div>
+
+                <!-- Submit Button -->
+                <div style="margin-top: 30px;">
+                    <button type="submit" class="btn-primary" style="width: 100%; padding: 14px;">Submit Complaint to AI Router</button>
+                </div>
+
+            </form>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="dashboard-footer">
+        Powered by <b>EduSort AI</b> | Vel Tech High Tech Engineering College | © 2026
+    </footer>
+
+    <!-- Load scripts -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script>
+        // Combine location and description on submit to feed keywords to ML model
+        document.getElementById('complaint-form').addEventListener('submit', function(e) {
+            const locationSelect = document.getElementById('location-select').value;
+            const complaintInput = document.getElementById('complaint-text-input');
+            
+            // If location is specific, prepend it to complaint text to enrich classifier features
+            if (locationSelect !== 'General') {
+                complaintInput.value = locationSelect + " - " + complaintInput.value;
+            }
+        });
+    </script>
+</body>
+</html>

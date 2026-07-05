@@ -1,0 +1,301 @@
+complaint,category,new_label,location
+AI&DS lab is very dusty,Academics,Campus_Lab,AI&DS
+CSE block toilet is not cleaned,Infrastructure,Campus_Washroom,CSE Block
+Main ground has lot of garbage,Sports,Campus_Ground,Main Ground
+Football court has lot of dust,Sports,Campus_Ground,Football Court
+Basketball court has lot of dust,Sports,Campus_Ground,Basketball Court
+Football court has lot of cow dung,Sports,Campus_Ground,Football Court
+Basketball court has lot of cow dung,Sports,Campus_Ground,Basketball Court
+Pathway near second staircase is not clean,Infrastructure,Campus_Corridor,Main Block
+Restroom near IT department is not clean,Infrastructure,Campus_Washroom,IT Block
+Seminar hall K301 is not clean,Academics,Campus_Classroom,K301
+Seminar hall K302 is not clean,Academics,Campus_Classroom,K302
+Seminar hall K303 is not clean,Academics,Campus_Classroom,K303
+ECE department restroom is not clean,Infrastructure,Campus_Washroom,ECE Block
+Girls common room is not clean,Infrastructure,Campus_CommonRoom,Girls Block
+Boys common room is not clean,Infrastructure,Campus_CommonRoom,Boys Block
+AI&DS classroom is not clean,Academics,Campus_Classroom,AI&DS
+Library washroom smells bad,Library,Campus_Washroom,Library
+Library floor is dusty,Library,Campus_Library,Library
+Corridor near admin office is dirty,Administration,Campus_Corridor,Admin Block
+Parking area is full of garbage,Transport,Campus_Ground,Parking Area
+ECE lab is dusty and not cleaned properly,Academics,Campus_Lab,ECE
+Washroom in MECH block is not hygienic,Infrastructure,Campus_Washroom,MECH Block
+EEE classroom is not clean,Academics,Campus_Classroom,EEE
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Washroom in EEE block is not hygienic,Infrastructure,Campus_Washroom,EEE Block
+Seminar hall K304 is not clean,Academics,Campus_Classroom,K304
+AI&DS lab is dusty and not cleaned properly,Academics,Campus_Lab,AI&DS
+MECH classroom is not clean,Academics,Campus_Classroom,MECH
+ECE classroom is not clean,Academics,Campus_Classroom,ECE
+Seminar hall K304 is not clean,Academics,Campus_Classroom,K304
+Seminar hall K301 is not clean,Academics,Campus_Classroom,K301
+IT classroom is not clean,Academics,Campus_Classroom,IT
+Washroom in AI&DS block is not hygienic,Infrastructure,Campus_Washroom,AI&DS Block
+Seminar hall K301 is not clean,Academics,Campus_Classroom,K301
+Washroom in CIVIL block is not hygienic,Infrastructure,Campus_Washroom,CIVIL Block
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+CIVIL lab is dusty and not cleaned properly,Academics,Campus_Lab,CIVIL
+Washroom in ECE block is not hygienic,Infrastructure,Campus_Washroom,ECE Block
+ECE classroom is not clean,Academics,Campus_Classroom,ECE
+MECH lab is dusty and not cleaned properly,Academics,Campus_Lab,MECH
+Corridor in Main Block is very dirty,Infrastructure,Campus_Corridor,Main Block
+Washroom in MECH block is not hygienic,Infrastructure,Campus_Washroom,MECH Block
+Corridor in Admin Block is very dirty,Infrastructure,Campus_Corridor,Admin Block
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Seminar hall K301 is not clean,Academics,Campus_Classroom,K301
+Washroom in EEE block is not hygienic,Infrastructure,Campus_Washroom,EEE Block
+AI&DS classroom is not clean,Academics,Campus_Classroom,AI&DS
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+EEE lab is dusty and not cleaned properly,Academics,Campus_Lab,EEE
+Washroom in MECH block is not hygienic,Infrastructure,Campus_Washroom,MECH Block
+AI&DS lab is dusty and not cleaned properly,Academics,Campus_Lab,AI&DS
+EEE classroom is not clean,Academics,Campus_Classroom,EEE
+ECE classroom is not clean,Academics,Campus_Classroom,ECE
+Washroom in CIVIL block is not hygienic,Infrastructure,Campus_Washroom,CIVIL Block
+EEE classroom is not clean,Academics,Campus_Classroom,EEE
+Corridor in Admin Block is very dirty,Infrastructure,Campus_Corridor,Admin Block
+Washroom in EEE block is not hygienic,Infrastructure,Campus_Washroom,EEE Block
+Seminar hall K301 is not clean,Academics,Campus_Classroom,K301
+AI&DS classroom is not clean,Academics,Campus_Classroom,AI&DS
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+CIVIL classroom is not clean,Academics,Campus_Classroom,CIVIL
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+CSE classroom is not clean,Academics,Campus_Classroom,CSE
+CIVIL lab is dusty and not cleaned properly,Academics,Campus_Lab,CIVIL
+CIVIL lab is dusty and not cleaned properly,Academics,Campus_Lab,CIVIL
+Corridor in Block B is very dirty,Infrastructure,Campus_Corridor,Block B
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Washroom in CSE block is not hygienic,Infrastructure,Campus_Washroom,CSE Block
+CIVIL classroom is not clean,Academics,Campus_Classroom,CIVIL
+IT lab is dusty and not cleaned properly,Academics,Campus_Lab,IT
+Washroom in MECH block is not hygienic,Infrastructure,Campus_Washroom,MECH Block
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Washroom in CIVIL block is not hygienic,Infrastructure,Campus_Washroom,CIVIL Block
+MECH classroom is not clean,Academics,Campus_Classroom,MECH
+EEE classroom is not clean,Academics,Campus_Classroom,EEE
+EEE classroom is not clean,Academics,Campus_Classroom,EEE
+CSE lab is dusty and not cleaned properly,Academics,Campus_Lab,CSE
+CIVIL lab is dusty and not cleaned properly,Academics,Campus_Lab,CIVIL
+Seminar hall K302 is not clean,Academics,Campus_Classroom,K302
+Corridor in Admin Block is very dirty,Infrastructure,Campus_Corridor,Admin Block
+CIVIL classroom is not clean,Academics,Campus_Classroom,CIVIL
+IT lab is dusty and not cleaned properly,Academics,Campus_Lab,IT
+Washroom in EEE block is not hygienic,Infrastructure,Campus_Washroom,EEE Block
+EEE classroom is not clean,Academics,Campus_Classroom,EEE
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+MECH classroom is not clean,Academics,Campus_Classroom,MECH
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Washroom in MECH block is not hygienic,Infrastructure,Campus_Washroom,MECH Block
+Washroom in CSE block is not hygienic,Infrastructure,Campus_Washroom,CSE Block
+EEE classroom is not clean,Academics,Campus_Classroom,EEE
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+ECE classroom is not clean,Academics,Campus_Classroom,ECE
+Seminar hall K303 is not clean,Academics,Campus_Classroom,K303
+Washroom in CIVIL block is not hygienic,Infrastructure,Campus_Washroom,CIVIL Block
+AI&DS classroom is not clean,Academics,Campus_Classroom,AI&DS
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Washroom in IT block is not hygienic,Infrastructure,Campus_Washroom,IT Block
+AI&DS lab is dusty and not cleaned properly,Academics,Campus_Lab,AI&DS
+Seminar hall K301 is not clean,Academics,Campus_Classroom,K301
+Corridor in Block A is very dirty,Infrastructure,Campus_Corridor,Block A
+Washroom in EEE block is not hygienic,Infrastructure,Campus_Washroom,EEE Block
+Seminar hall K302 is not clean,Academics,Campus_Classroom,K302
+IT lab is dusty and not cleaned properly,Academics,Campus_Lab,IT
+Corridor in Block C is very dirty,Infrastructure,Campus_Corridor,Block C
+Seminar hall K303 is not clean,Academics,Campus_Classroom,K303
+Washroom in AI&DS block is not hygienic,Infrastructure,Campus_Washroom,AI&DS Block
+Washroom in ECE block is not hygienic,Infrastructure,Campus_Washroom,ECE Block
+Seminar hall K304 is not clean,Academics,Campus_Classroom,K304
+Corridor in Block C is very dirty,Infrastructure,Campus_Corridor,Block C
+ECE classroom is not clean,Academics,Campus_Classroom,ECE
+EEE classroom is not clean,Academics,Campus_Classroom,EEE
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Seminar hall K304 is not clean,Academics,Campus_Classroom,K304
+Seminar hall K301 is not clean,Academics,Campus_Classroom,K301
+AI&DS lab is dusty and not cleaned properly,Academics,Campus_Lab,AI&DS
+Seminar hall K301 is not clean,Academics,Campus_Classroom,K301
+Seminar hall K302 is not clean,Academics,Campus_Classroom,K302
+ECE classroom is not clean,Academics,Campus_Classroom,ECE
+Washroom in CSE block is not hygienic,Infrastructure,Campus_Washroom,CSE Block
+Corridor in Main Block is very dirty,Infrastructure,Campus_Corridor,Main Block
+Seminar hall K303 is not clean,Academics,Campus_Classroom,K303
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Washroom in CSE block is not hygienic,Infrastructure,Campus_Washroom,CSE Block
+Corridor in Block A is very dirty,Infrastructure,Campus_Corridor,Block A
+EEE classroom is not clean,Academics,Campus_Classroom,EEE
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+ECE classroom is not clean,Academics,Campus_Classroom,ECE
+Washroom in ECE block is not hygienic,Infrastructure,Campus_Washroom,ECE Block
+Corridor in Admin Block is very dirty,Infrastructure,Campus_Corridor,Admin Block
+Corridor in Block C is very dirty,Infrastructure,Campus_Corridor,Block C
+Seminar hall K302 is not clean,Academics,Campus_Classroom,K302
+Corridor in Block C is very dirty,Infrastructure,Campus_Corridor,Block C
+Seminar hall K303 is not clean,Academics,Campus_Classroom,K303
+EEE lab is dusty and not cleaned properly,Academics,Campus_Lab,EEE
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Corridor in Block C is very dirty,Infrastructure,Campus_Corridor,Block C
+Seminar hall K302 is not clean,Academics,Campus_Classroom,K302
+MECH lab is dusty and not cleaned properly,Academics,Campus_Lab,MECH
+Seminar hall K304 is not clean,Academics,Campus_Classroom,K304
+Seminar hall K302 is not clean,Academics,Campus_Classroom,K302
+Washroom in AI&DS block is not hygienic,Infrastructure,Campus_Washroom,AI&DS Block
+Corridor in Admin Block is very dirty,Infrastructure,Campus_Corridor,Admin Block
+ECE lab is dusty and not cleaned properly,Academics,Campus_Lab,ECE
+CSE lab is dusty and not cleaned properly,Academics,Campus_Lab,CSE
+Corridor in Main Block is very dirty,Infrastructure,Campus_Corridor,Main Block
+Corridor in Admin Block is very dirty,Infrastructure,Campus_Corridor,Admin Block
+AI&DS classroom is not clean,Academics,Campus_Classroom,AI&DS
+Seminar hall K303 is not clean,Academics,Campus_Classroom,K303
+MECH lab is dusty and not cleaned properly,Academics,Campus_Lab,MECH
+CSE classroom is not clean,Academics,Campus_Classroom,CSE
+CSE classroom is not clean,Academics,Campus_Classroom,CSE
+Corridor in Block B is very dirty,Infrastructure,Campus_Corridor,Block B
+ECE classroom is not clean,Academics,Campus_Classroom,ECE
+MECH classroom is not clean,Academics,Campus_Classroom,MECH
+Washroom in ECE block is not hygienic,Infrastructure,Campus_Washroom,ECE Block
+Washroom in CIVIL block is not hygienic,Infrastructure,Campus_Washroom,CIVIL Block
+Seminar hall K302 is not clean,Academics,Campus_Classroom,K302
+ECE lab is dusty and not cleaned properly,Academics,Campus_Lab,ECE
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Corridor in Block B is very dirty,Infrastructure,Campus_Corridor,Block B
+CSE classroom is not clean,Academics,Campus_Classroom,CSE
+Corridor in Block B is very dirty,Infrastructure,Campus_Corridor,Block B
+AI&DS classroom is not clean,Academics,Campus_Classroom,AI&DS
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+CSE lab is dusty and not cleaned properly,Academics,Campus_Lab,CSE
+IT lab is dusty and not cleaned properly,Academics,Campus_Lab,IT
+CIVIL classroom is not clean,Academics,Campus_Classroom,CIVIL
+ECE lab is dusty and not cleaned properly,Academics,Campus_Lab,ECE
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Seminar hall K301 is not clean,Academics,Campus_Classroom,K301
+ECE lab is dusty and not cleaned properly,Academics,Campus_Lab,ECE
+CIVIL classroom is not clean,Academics,Campus_Classroom,CIVIL
+Seminar hall K301 is not clean,Academics,Campus_Classroom,K301
+Washroom in EEE block is not hygienic,Infrastructure,Campus_Washroom,EEE Block
+EEE classroom is not clean,Academics,Campus_Classroom,EEE
+Washroom in ECE block is not hygienic,Infrastructure,Campus_Washroom,ECE Block
+Seminar hall K302 is not clean,Academics,Campus_Classroom,K302
+Washroom in AI&DS block is not hygienic,Infrastructure,Campus_Washroom,AI&DS Block
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Corridor in Main Block is very dirty,Infrastructure,Campus_Corridor,Main Block
+Washroom in IT block is not hygienic,Infrastructure,Campus_Washroom,IT Block
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Corridor in Block C is very dirty,Infrastructure,Campus_Corridor,Block C
+Corridor in Block C is very dirty,Infrastructure,Campus_Corridor,Block C
+Washroom in ECE block is not hygienic,Infrastructure,Campus_Washroom,ECE Block
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Seminar hall K301 is not clean,Academics,Campus_Classroom,K301
+Corridor in Block C is very dirty,Infrastructure,Campus_Corridor,Block C
+Corridor in Block C is very dirty,Infrastructure,Campus_Corridor,Block C
+ECE lab is dusty and not cleaned properly,Academics,Campus_Lab,ECE
+CIVIL lab is dusty and not cleaned properly,Academics,Campus_Lab,CIVIL
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Seminar hall K304 is not clean,Academics,Campus_Classroom,K304
+Seminar hall K303 is not clean,Academics,Campus_Classroom,K303
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+AI&DS lab is dusty and not cleaned properly,Academics,Campus_Lab,AI&DS
+Seminar hall K301 is not clean,Academics,Campus_Classroom,K301
+ECE classroom is not clean,Academics,Campus_Classroom,ECE
+Washroom in MECH block is not hygienic,Infrastructure,Campus_Washroom,MECH Block
+Corridor in Block A is very dirty,Infrastructure,Campus_Corridor,Block A
+Seminar hall K302 is not clean,Academics,Campus_Classroom,K302
+Corridor in Block A is very dirty,Infrastructure,Campus_Corridor,Block A
+Washroom in IT block is not hygienic,Infrastructure,Campus_Washroom,IT Block
+Seminar hall K304 is not clean,Academics,Campus_Classroom,K304
+MECH lab is dusty and not cleaned properly,Academics,Campus_Lab,MECH
+Seminar hall K304 is not clean,Academics,Campus_Classroom,K304
+Washroom in CIVIL block is not hygienic,Infrastructure,Campus_Washroom,CIVIL Block
+Corridor in Block C is very dirty,Infrastructure,Campus_Corridor,Block C
+CIVIL lab is dusty and not cleaned properly,Academics,Campus_Lab,CIVIL
+CIVIL classroom is not clean,Academics,Campus_Classroom,CIVIL
+ECE classroom is not clean,Academics,Campus_Classroom,ECE
+ECE classroom is not clean,Academics,Campus_Classroom,ECE
+Seminar hall K304 is not clean,Academics,Campus_Classroom,K304
+Washroom in IT block is not hygienic,Infrastructure,Campus_Washroom,IT Block
+MECH lab is dusty and not cleaned properly,Academics,Campus_Lab,MECH
+Corridor in Block A is very dirty,Infrastructure,Campus_Corridor,Block A
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Corridor in Main Block is very dirty,Infrastructure,Campus_Corridor,Main Block
+CIVIL classroom is not clean,Academics,Campus_Classroom,CIVIL
+AI&DS lab is dusty and not cleaned properly,Academics,Campus_Lab,AI&DS
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Washroom in CIVIL block is not hygienic,Infrastructure,Campus_Washroom,CIVIL Block
+Corridor in Main Block is very dirty,Infrastructure,Campus_Corridor,Main Block
+Seminar hall K301 is not clean,Academics,Campus_Classroom,K301
+Washroom in AI&DS block is not hygienic,Infrastructure,Campus_Washroom,AI&DS Block
+Washroom in ECE block is not hygienic,Infrastructure,Campus_Washroom,ECE Block
+CSE classroom is not clean,Academics,Campus_Classroom,CSE
+Seminar hall K301 is not clean,Academics,Campus_Classroom,K301
+Seminar hall K302 is not clean,Academics,Campus_Classroom,K302
+Seminar hall K304 is not clean,Academics,Campus_Classroom,K304
+CIVIL lab is dusty and not cleaned properly,Academics,Campus_Lab,CIVIL
+MECH classroom is not clean,Academics,Campus_Classroom,MECH
+CSE classroom is not clean,Academics,Campus_Classroom,CSE
+Washroom in ECE block is not hygienic,Infrastructure,Campus_Washroom,ECE Block
+CSE classroom is not clean,Academics,Campus_Classroom,CSE
+Corridor in Admin Block is very dirty,Infrastructure,Campus_Corridor,Admin Block
+AI&DS lab is dusty and not cleaned properly,Academics,Campus_Lab,AI&DS
+Seminar hall K304 is not clean,Academics,Campus_Classroom,K304
+Seminar hall K304 is not clean,Academics,Campus_Classroom,K304
+Washroom in IT block is not hygienic,Infrastructure,Campus_Washroom,IT Block
+Corridor in Block C is very dirty,Infrastructure,Campus_Corridor,Block C
+Corridor in Block B is very dirty,Infrastructure,Campus_Corridor,Block B
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Washroom in AI&DS block is not hygienic,Infrastructure,Campus_Washroom,AI&DS Block
+Seminar hall K304 is not clean,Academics,Campus_Classroom,K304
+ECE lab is dusty and not cleaned properly,Academics,Campus_Lab,ECE
+Washroom in EEE block is not hygienic,Infrastructure,Campus_Washroom,EEE Block
+Corridor in Block C is very dirty,Infrastructure,Campus_Corridor,Block C
+Seminar hall K303 is not clean,Academics,Campus_Classroom,K303
+Washroom in IT block is not hygienic,Infrastructure,Campus_Washroom,IT Block
+MECH classroom is not clean,Academics,Campus_Classroom,MECH
+Seminar hall K302 is not clean,Academics,Campus_Classroom,K302
+Corridor in Block C is very dirty,Infrastructure,Campus_Corridor,Block C
+Washroom in CSE block is not hygienic,Infrastructure,Campus_Washroom,CSE Block
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+EEE lab is dusty and not cleaned properly,Academics,Campus_Lab,EEE
+ECE lab is dusty and not cleaned properly,Academics,Campus_Lab,ECE
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+Washroom in CIVIL block is not hygienic,Infrastructure,Campus_Washroom,CIVIL Block
+Washroom in EEE block is not hygienic,Infrastructure,Campus_Washroom,EEE Block
+Washroom in EEE block is not hygienic,Infrastructure,Campus_Washroom,EEE Block
+Seminar hall K301 is not clean,Academics,Campus_Classroom,K301
+Washroom in EEE block is not hygienic,Infrastructure,Campus_Washroom,EEE Block
+Corridor in Block A is very dirty,Infrastructure,Campus_Corridor,Block A
+AI&DS classroom is not clean,Academics,Campus_Classroom,AI&DS
+Washroom in MECH block is not hygienic,Infrastructure,Campus_Washroom,MECH Block
+Washroom in CIVIL block is not hygienic,Infrastructure,Campus_Washroom,CIVIL Block
+Seminar hall K302 is not clean,Academics,Campus_Classroom,K302
+ECE classroom is not clean,Academics,Campus_Classroom,ECE
+Corridor in Block A is very dirty,Infrastructure,Campus_Corridor,Block A
+Seminar hall K301 is not clean,Academics,Campus_Classroom,K301
+Seminar hall K303 is not clean,Academics,Campus_Classroom,K303
+AI&DS classroom is not clean,Academics,Campus_Classroom,AI&DS
+CSE classroom is not clean,Academics,Campus_Classroom,CSE
+Seminar hall K302 is not clean,Academics,Campus_Classroom,K302
+IT classroom is not clean,Academics,Campus_Classroom,IT
+ECE lab is dusty and not cleaned properly,Academics,Campus_Lab,ECE
+IT lab is dusty and not cleaned properly,Academics,Campus_Lab,IT
+AI&DS lab is dusty and not cleaned properly,Academics,Campus_Lab,AI&DS
+CIVIL classroom is not clean,Academics,Campus_Classroom,CIVIL
+IT classroom is not clean,Academics,Campus_Classroom,IT
+CIVIL lab is dusty and not cleaned properly,Academics,Campus_Lab,CIVIL
+IT classroom is not clean,Academics,Campus_Classroom,IT
+CSE classroom is not clean,Academics,Campus_Classroom,CSE
+MECH lab is dusty and not cleaned properly,Academics,Campus_Lab,MECH
+Corridor in Main Block is very dirty,Infrastructure,Campus_Corridor,Main Block
+Library floor is dusty and needs cleaning,Library,Campus_Library,Library
+MECH classroom is not clean,Academics,Campus_Classroom,MECH
+AI&DS lab is dusty and not cleaned properly,Academics,Campus_Lab,AI&DS
+EEE lab is dusty and not cleaned properly,Academics,Campus_Lab,EEE
+EEE classroom is not clean,Academics,Campus_Classroom,EEE
+Washroom in EEE block is not hygienic,Infrastructure,Campus_Washroom,EEE Block
+Seminar hall K303 is not clean,Academics,Campus_Classroom,K303
+EEE lab is dusty and not cleaned properly,Academics,Campus_Lab,EEE

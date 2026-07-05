@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - EduSort</title>
+    
+    <!-- Link styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    
+    <!-- Load Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="admin-body">
+
+    <div class="admin-layout">
+        
+        <!-- Admin Navbar -->
+        <nav class="admin-navbar">
+            <a href="/" class="admin-brand">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="EduSort Logo">
+                <div class="admin-brand-title">
+                    <h1>EduSort</h1>
+                    <span>College Administration Room</span>
+                </div>
+            </a>
+            <div class="admin-nav-actions">
+                <a href="{{ url_for('admin_logs') }}" class="admin-nav-btn">📊 View Cleaning & escalation Logs</a>
+                <a href="/admin_logout" class="admin-nav-btn" style="border-color: #ef4444; color: #fca5a5;">🚪 Logout</a>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="admin-main">
+            
+            <h2 class="admin-page-title">⚙️ College Grievance Console</h2>
+
+            <!-- Jinja Logic to Compute Overall Stats -->
+            {% set total_count = complaints|length %}
+            {% set open_count = complaints | selectattr('status', 'equalto', 'Open') | list | length %}
+            {% set progress_count = complaints | selectattr('status', 'equalto', 'In-Progress') | list | length %}
+            {% set resolved_count = complaints | selectattr('status', 'equalto', 'Resolved') | list | length %}
+            {% set assigned_count = complaints | selectattr('status', 'equalto', 'Assigned') | list | length %}
+            
+            {% set clean_count = namespace(value=0) %}
+            {% for c in complaints %}
+                {% if "Hostel" in c.department or "Campus" in c.department %}
+                    {% set clean_count.value = clean_count.value + 1 %}
+                {% endif %}
+            {% endfor %}
+
+            <!-- Statistics Grid -->
+            <section class="admin-stats-grid">
+                <div class="admin-stat-card total">
+                    <div class="admin-stat-label">Total Grievances</div>
+                    <div class="admin-stat-val">{{ total_count }}</div>
+                </div>
+                
+                <div class="admin-stat-card open">
+                    <div class="admin-stat-label">Open</div>
+                    <div class="admin-stat-val">{{ open_count }}</div>
+                </div>
+                
+                <div class="admin-stat-card progress">
+                    <div class="admin-stat-label">In Progress</div>
+                    <div class="admin-stat-val">{{ progress_count + assigned_count }}</div>
+                </div>
+                
+                <div class="admin-stat-card resolved">
+                    <div class="admin-stat-label">Resolved</div>
+                    <div class="admin-stat-val">{{ resolved_count }}</div>
+                </div>
+                
+                <div class="admin-stat-card cleaning">
+                    <div class="admin-stat-label">Cleaning Tasks</div>
+                    <div class="admin-stat-val">{{ clean_count.value }}</div>
+                </div>
+            </section>
+
+            <!-- Analytics Row -->
+            <section class="analytics-row">
+                <!-- Bar Chart -->
+                <div class="chart-card">
+                    <div class="chart-card-title">Department Grievance Distribution</div>
+                    <div class="chart-container">
+                        <canvas id="deptChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Pie/Donut Chart -->
+                <div class="chart-card">
+                    <div class="chart-card-title">Grievance Resolution Statuses</div>
+                    <div class="chart-container">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Search and Filters Box -->
+            <section class="filter-box">
+                <div class="filter-left">
+                    <div class="filter-control-wrap">
+                        <label for="admin-filter-status">Status:</label>
+                        <select id="admin-filter-status" class="filter-select">
+                            <option value="">All Statuses</option>
+                            <option value="Open">Open</option>
+                            <option value="Assigned">Assigned</option>
+                            <option value="In-Progress">In-Progress</option>
+                            <option value="Resolved">Resolved</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-control-wrap">
+                        <label for="admin-filter-dept">Department:</label>
+                        <select id="admin-filter-dept" class="filter-select">
+                            <option value="">All Departments</option>
+                            <option value="Academic">Academic</option>
+                            <option value="Hostel">Hostel (Cleaning)</option>
+                            <option value="Campus">Campus (Cleaning)</option>
+                            <option value="Amenities">Amenities</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <input type="text" id="admin-search" class="filter-search" placeholder="Search email, title, details...">
+                </div>
+            </section>
+
+            <!-- Complaints Table -->
+            <section class="container-box" style="padding: 20px;">
+                <div class="table-responsive">
+                    <table class="custom-table" id="complaints-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Student Email</th>
+                                <th>Grievance Title</th>
+                                <th>AI Department</th>
+                                <th>Priority</th>
+                                <th>Assigned Resolver</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in complaints %}
+                                <tr class="complaint-row" 
+                                    data-status="{{ c.status }}" 
+                                    data-dept="{{ c.department }}"
+                                >
+                                    <td style="font-weight: 700;">#{{ c.id }}</td>
+                                    <td style="font-weight: 500;">{{ c.student_email }}</td>
+                                    <td>{{ c.complaint_title or "General Grievance" }}</td>
+                                    <td>{{ c.department }}</td>
+                                    <td>
+                                        <span class="prio-badge prio-{{ c.priority|lower if c.priority else 'medium' }}">
+                                            {{ c.priority or 'Medium' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if c.assigned_cleaner and c.assigned_cleaner != "Not Assigned" %}
+                                            🧹 {{ c.assigned_cleaner }}
+                                        {% else %}
+                                            <span style="color: var(--text-muted);">None</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-{{ c.status|lower|replace(' ', '-') }}">
+                                            {{ c.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <!-- Store complaint data to pass directly to Modal trigger -->
+                                        <button 
+                                            class="btn-primary" 
+                                            style="padding: 6px 12px; font-size: 12px;"
+                                            onclick='openComplaintModal({
+                                                id: "{{ c.id }}",
+                                                student_email: "{{ c.student_email }}",
+                                                complaint_title: "{{ (c.complaint_title or 'General Grievance')|replace('\"', '\\\"')|replace('\n', ' ') }}",
+                                                complaint_text: "{{ c.complaint_text|replace('\"', '\\\"')|replace('\n', ' ') }}",
+                                                department: "{{ c.department }}",
+                                                assigned_cleaner: "{{ c.assigned_cleaner or 'None' }}",
+                                                status: "{{ c.status }}",
+                                                priority: "{{ c.priority or 'Medium' }}",
+                                                admin_remarks: "{{ (c.admin_remarks or '')|replace('\"', '\\\"')|replace('\n', ' ') }}",
+                                                timestamp: "{{ c.timestamp.strftime('%d %b %Y, %H:%M') if c.timestamp else 'N/A' }}"
+                                            })'
+                                        >
+                                            Manage
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Complaint Manager Detail Modal -->
+        <div class="modal-overlay" id="complaint-modal">
+            <div class="modal-content-box">
+                <div class="modal-header">
+                    <h3>Grievance Action Panel - Ticket <span id="modal-ticket-id">#0</span></h3>
+                    <button class="modal-close" onclick="closeComplaintModal()">×</button>
+                </div>
+                <form method="POST" action="{{ url_for('admin') }}">
+                    <input type="hidden" name="complaint_id" id="modal-form-id">
+                    
+                    <div class="modal-body">
+                        
+                        <div class="modal-field">
+                            <div class="modal-field-lbl">Student Email</div>
+                            <div class="modal-field-val" id="modal-email">Loading...</div>
+                        </div>
+
+                        <div class="modal-field">
+                            <div class="modal-field-lbl">Complaint Title</div>
+                            <div class="modal-field-val" id="modal-title">Loading...</div>
+                        </div>
+
+                        <div class="modal-field">
+                            <div class="modal-field-lbl">Detailed Complaint Text</div>
+                            <div class="modal-field-val" id="modal-text" style="white-space: pre-line; background-color: var(--bg); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 13px; line-height: 1.5;">Loading...</div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="modal-field">
+                                <div class="modal-field-lbl">AI Classified Department</div>
+                                <div class="modal-field-val" id="modal-department">Loading...</div>
+                            </div>
+                            
+                            <div class="modal-field">
+                                <div class="modal-field-lbl">Priority Level</div>
+                                <div class="modal-field-val"><span id="modal-priority" class="prio-badge prio-medium">Medium</span></div>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="modal-field">
+                                <div class="modal-field-lbl">Assigned Resolver / Cleaner</div>
+                                <div class="modal-field-val" id="modal-assigned">Loading...</div>
+                            </div>
+                            
+                            <div class="modal-field">
+                                <div class="modal-field-lbl">Filed On</div>
+                                <div class="modal-field-val" id="modal-timestamp">Loading...</div>
+                            </div>
+                        </div>
+
+                        <div style="border-top: 1px solid var(--border); margin-top: 20px; padding-top: 15px;">
+                            <!-- Update Status Selection -->
+                            <div class="form-group">
+                                <label for="modal-status-select">Update Resolution Status</label>
+                                <select id="modal-status-select" name="status" class="form-control">
+                                    <option value="Open">Open</option>
+                                    <option value="Assigned">Assigned</option>
+                                    <option value="In-Progress">In-Progress</option>
+                                    <option value="Resolved">Resolved</option>
+                                </select>
+                            </div>
+
+                            <!-- Resolution Notes -->
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="modal-remarks-textarea">Add Resolver Remarks / Resolution Notes</label>
+                                <textarea id="modal-remarks-textarea" name="admin_remarks" class="form-control" rows="3" placeholder="Provide notes or instructions visible to the student..."></textarea>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" style="padding: 8px 16px;" onclick="closeComplaintModal()">Close</button>
+                        <button type="submit" class="btn-primary" style="padding: 8px 16px;">Save Status & Remarks</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="admin-footer">
+            Powered by <b>EduSort AI Portal</b> | Vel Tech High Tech Engineering College | © 2026
+        </footer>
+
+    </div>
+
+    <!-- Chart Configuration Script -->
+    <script>
+        // Setup data computed in Jinja
+        {% set clean_hostel = namespace(value=0) %}
+        {% set clean_campus = namespace(value=0) %}
+        {% set general_count = namespace(value=0) %}
+        {% set facility_count = namespace(value=0) %}
+        {% set miscellaneous_count = namespace(value=0) %}
+        
+        {% for c in complaints %}
+            {% if "Hostel" in c.department %}
+                {% set clean_hostel.value = clean_hostel.value + 1 %}
+            {% elif "Campus" in c.department %}
+                {% set clean_campus.value = clean_campus.value + 1 %}
+            {% elif "Academic" in c.department or "Exam" in c.department %}
+                {% set general_count.value = general_count.value + 1 %}
+            {% elif "Amenities" in c.department or "Wi-Fi" in c.department %}
+                {% set facility_count.value = facility_count.value + 1 %}
+            {% else %}
+                {% set miscellaneous_count.value = miscellaneous_count.value + 1 %}
+            {% endif %}
+        {% endfor %}
+        
+        const deptData = [
+            {{ general_count.value }},
+            {{ facility_count.value }},
+            {{ clean_hostel.value }},
+            {{ clean_campus.value }},
+            {{ miscellaneous_count.value }}
+        ];
+
+        const statusData = [
+            {{ complaints | selectattr('status', 'equalto', 'Open') | list | length }},
+            {{ complaints | selectattr('status', 'equalto', 'Assigned') | list | length }},
+            {{ complaints | selectattr('status', 'equalto', 'In-Progress') | list | length }},
+            {{ complaints | selectattr('status', 'equalto', 'Resolved') | list | length }}
+        ];
+
+        // 1. Bar Chart: Department Distribution
+        const ctxDept = document.getElementById('deptChart').getContext('2d');
+        new Chart(ctxDept, {
+            type: 'bar',
+            data: {
+                labels: ['Academic', 'Amenities', 'Hostel (Cleaning)', 'Campus (Cleaning)', 'Others'],
+                datasets: [{
+                    label: 'Complaint Count',
+                    data: deptData,
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.75)',
+                        'rgba(99, 102, 241, 0.75)',
+                        'rgba(139, 92, 246, 0.75)',
+                        'rgba(16, 185, 129, 0.75)',
+                        'rgba(100, 116, 139, 0.75)'
+                    ],
+                    borderColor: [
+                        '#3b82f6',
+                        '#6366f1',
+                        '#8b5cf6',
+                        '#10b981',
+                        '#64748b'
+                    ],
+                    borderWidth: 1.5,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+
+        // 2. Donut Chart: Status Distribution
+        const ctxStatus = document.getElementById('statusChart').getContext('2d');
+        new Chart(ctxStatus, {
+            type: 'doughnut',
+            data: {
+                labels: ['Open', 'Assigned', 'In-Progress', 'Resolved'],
+                datasets: [{
+                    data: statusData,
+                    backgroundColor: [
+                        '#3b82f6',
+                        '#8b5cf6',
+                        '#f59e0b',
+                        '#10b981'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12,
+                            font: { family: 'Inter', size: 12 }
+                        }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+    </script>
+    
+    <!-- Load scripts -->
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+</body>
+</html>

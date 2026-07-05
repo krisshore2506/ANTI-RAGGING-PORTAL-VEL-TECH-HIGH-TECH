@@ -1,0 +1,88 @@
+/* =====================================================
+   STUDENT DASHBOARD — BLUE & WHITE GLOW (SCOPED)
+   ===================================================== */
+
+.student-dashboard-page {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at top, rgba(30,136,201,0.12), transparent 60%),
+        #f9fbfd;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* ---------- Logo ---------- */
+.student-dashboard-logo {
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.student-dashboard-logo img {
+    height: 120px;
+    width: auto;
+}
+
+/* ---------- Container ---------- */
+.student-dashboard-container {
+    max-width: 480px;
+    margin: 60px auto;
+    background: #ffffff;
+    padding: 34px;
+    border-radius: 18px;
+    text-align: center;
+
+    /* BLUE-WHITE GLOW */
+    box-shadow:
+        0 14px 35px rgba(15, 76, 129, 0.15),
+        0 0 24px rgba(30, 136, 201, 0.12);
+}
+
+.student-dashboard-container h2 {
+    margin-bottom: 6px;
+    color: #0f4c81;
+    font-weight: 600;
+}
+
+.student-dashboard-container p {
+    margin-bottom: 24px;
+    color: #4b5563;
+}
+
+/* ---------- Buttons ---------- */
+.student-dashboard-container .btn {
+    width: 100%;
+    padding: 15px;
+    margin-top: 14px;
+    font-size: 16px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    color: #ffffff;
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+/* Raise Complaint */
+.student-dashboard-container .raise {
+    background-color: #1e88c9;
+    box-shadow: 0 0 14px rgba(30, 136, 201, 0.45);
+}
+
+/* Track Complaint */
+.student-dashboard-container .track {
+    background-color: #16a34a;
+    box-shadow: 0 0 14px rgba(22, 163, 74, 0.35);
+}
+
+/* Logout */
+.student-dashboard-container .logout {
+    background-color: #dc2626;
+    box-shadow: 0 0 14px rgba(220, 38, 38, 0.35);
+}
+
+/* Hover */
+.student-dashboard-container .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 20px rgba(0,0,0,0.25);
+}

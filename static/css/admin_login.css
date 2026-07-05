@@ -1,0 +1,99 @@
+/* =====================================================
+   ADMIN LOGIN PAGE — FULLY SCOPED
+   ===================================================== */
+
+.admin-login-page {
+    background: #f4f6f9;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ---------- Login Box ---------- */
+.admin-login-box {
+    width: 100%;
+    max-width: 400px;
+    background: #ffffff;
+    padding: 32px;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+}
+
+/* ---------- Logo ---------- */
+.admin-login-logo {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.admin-login-logo img {
+    height: 120px;       /* 👈 adjust if needed */
+    width: auto;
+}
+
+/* ---------- Title ---------- */
+.admin-login-title {
+    text-align: center;
+    margin: 8px 0 0;
+    font-size: 32px;
+    font-weight: bold;
+    color: #360040;
+}
+
+/* ---------- Subtitle ---------- */
+.admin-login-subtitle {
+    text-align: center;
+    margin-bottom: 26px;
+    font-size: 14px;
+    color: #666666;
+    letter-spacing: 1px;
+}
+
+/* ---------- Labels ---------- */
+.admin-login-box label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+/* ---------- Inputs ---------- */
+.admin-login-box input {
+    width: 100%;
+    padding: 11px;
+    margin-bottom: 18px;
+    border: 1px solid #cccccc;
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+/* ---------- Button ---------- */
+.admin-login-box button {
+    width: 100%;
+    padding: 12px;
+    background-color: #1e88c9; /* blue */
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+
+    /* SOFT BLUE GLOW */
+    box-shadow: 0 0 12px rgba(30, 136, 201, 0.45);
+}
+
+.admin-login-box button:hover {
+    background-color: #0f4c81;
+    box-shadow: 0 0 18px rgba(30, 136, 201, 0.65);
+}
+
+/* ---------- Error ---------- */
+.admin-login-error {
+    margin-top: 14px;
+    text-align: center;
+    color: red;
+    font-size: 14px;
+}

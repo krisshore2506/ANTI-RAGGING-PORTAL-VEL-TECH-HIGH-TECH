@@ -1,0 +1,170 @@
+/* =====================================================
+   OTP VERIFICATION PAGE — BLUE & WHITE GLOW (SCOPED)
+   ===================================================== */
+
+.otp-page {
+    background:
+        radial-gradient(circle at top, rgba(30,136,201,0.12), transparent 60%),
+        #f9fbfd;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* ---------- Logo ---------- */
+.otp-logo {
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.otp-logo img {
+    height: 120px;
+    width: auto;
+    display: inline-block;
+}
+
+/* ---------- Header ---------- */
+.otp-header {
+    font-size: 40px;
+    font-weight: bold;
+    text-align: center;
+    padding: 22px;
+    background: linear-gradient(90deg, #1e88c9, #0f4c81);
+    color: #ffffff;
+    margin-top: 10px;
+}
+
+/* ---------- Container ---------- */
+.otp-container {
+    max-width: 420px;
+    margin: 50px auto;
+    background: #ffffff;
+    padding: 32px;
+    border-radius: 16px;
+    text-align: center;
+
+    /* BLUE-WHITE GLOW */
+    box-shadow:
+        0 12px 30px rgba(15, 76, 129, 0.15),
+        0 0 22px rgba(30, 136, 201, 0.12);
+}
+
+.otp-container h2 {
+    margin-bottom: 14px;
+    color: #0f4c81;
+    font-weight: 600;
+}
+
+/* ---------- Info Text ---------- */
+.otp-info {
+    font-size: 14px;
+    margin-bottom: 14px;
+    color: #374151;
+}
+
+/* ---------- Countdown ---------- */
+.otp-countdown {
+    font-weight: 800;          /* EXTRA BOLD */
+    font-size: 16px;           /* slightly bigger */
+    margin-bottom: 18px;
+    color: #0f4c81;            /* darker blue for emphasis */
+    letter-spacing: 0.5px;
+}
+
+/* ---------- Label ---------- */
+.otp-container label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+/* ---------- Input ---------- */
+.otp-container input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+    box-sizing: border-box;
+    margin-bottom: 22px;
+}
+
+/* ---------- Button ---------- */
+.otp-container button {
+    width: 100%;
+    padding: 13px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background-color: #1e88c9;
+    color: #ffffff;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+
+    /* GLOW */
+    box-shadow: 0 0 14px rgba(30, 136, 201, 0.45);
+}
+
+.otp-container button:hover {
+    background-color: #0f4c81;
+    box-shadow: 0 0 20px rgba(30, 136, 201, 0.65);
+}
+
+/* ---------- Footer ---------- */
+.otp-footer {
+    text-align: center;
+    font-size: 13px;
+    margin: 40px 0;
+    color: #4b5563;
+}
+/* ---------- OTP Error Message ---------- */
+.otp-error {
+    margin-bottom: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #dc2626;   /* calm red */
+    text-align: center;
+}
+/* ---------- Resend OTP ---------- */
+.otp-resend {
+    margin-top: 16px;
+    text-align: center;
+}
+
+#resend-text {
+    font-size: 14px;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+#resend-btn {
+    font-size: 14px;
+    color: #9ca3af;
+    pointer-events: none;
+    cursor: not-allowed;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+#resend-btn.active {
+    color: #1e88c9;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+#resend-btn.active:hover {
+    text-decoration: underline;
+}
+
+/* ---------- Success Message ---------- */
+.otp-success {
+    margin-top: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #16a34a;
+    text-align: center;
+}
+
+

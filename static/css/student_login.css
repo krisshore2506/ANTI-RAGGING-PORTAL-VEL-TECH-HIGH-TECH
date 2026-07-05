@@ -1,0 +1,105 @@
+/* =====================================================
+   STUDENT LOGIN PAGE — BLUE & WHITE GLOW (SCOPED)
+   ===================================================== */
+
+.student-login-page {
+    background:
+        radial-gradient(circle at top, rgba(30,136,201,0.12), transparent 60%),
+        #f9fbfd;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* ---------- Logo ---------- */
+.student-login-logo {
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.student-login-logo img {
+    height: 120px;
+    width: auto;
+    display: inline-block;
+}
+
+/* ---------- Header ---------- */
+.student-login-header {
+    font-size: 40px;
+    font-weight: bold;
+    text-align: center;
+    padding: 22px;
+    background: linear-gradient(90deg, #1e88c9, #0f4c81);
+    color: #ffffff;
+    margin-top: 10px;
+}
+
+/* ---------- Container ---------- */
+.student-login-container {
+    max-width: 420px;
+    margin: 50px auto;
+    background: #ffffff;
+    padding: 32px;
+    border-radius: 16px;
+    text-align: center;
+
+    /* BLUE-WHITE GLOW */
+    box-shadow:
+        0 12px 30px rgba(15, 76, 129, 0.15),
+        0 0 22px rgba(30, 136, 201, 0.12);
+}
+
+.student-login-container h2 {
+    margin-bottom: 22px;
+    color: #0f4c81;
+    font-weight: 600;
+}
+
+/* ---------- Label ---------- */
+.student-login-container label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+/* ---------- Input ---------- */
+.student-login-container input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+    box-sizing: border-box;
+    margin-bottom: 22px;
+}
+
+/* ---------- Button ---------- */
+.student-login-container button {
+    width: 100%;
+    padding: 13px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background-color: #1e88c9;
+    color: #ffffff;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+
+    /* GLOW */
+    box-shadow: 0 0 14px rgba(30, 136, 201, 0.45);
+}
+
+.student-login-container button:hover {
+    background-color: #0f4c81;
+    box-shadow: 0 0 20px rgba(30, 136, 201, 0.65);
+}
+
+/* ---------- Footer ---------- */
+.student-login-footer {
+    text-align: center;
+    font-size: 13px;
+    margin: 40px 0;
+    color: #4b5563;
+}

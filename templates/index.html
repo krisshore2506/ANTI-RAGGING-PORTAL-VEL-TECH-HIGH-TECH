@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduSort - AI-Powered Student Complaint System</title>
+    
+    <!-- Link styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+</head>
+<body class="landing-body">
+
+    <!-- Navigation Header -->
+    <nav class="landing-nav">
+        <a href="/" class="brand-logo-block">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Vel Tech Logo">
+            <span class="brand-title">EduSort</span>
+        </a>
+        <div class="nav-actions">
+            <a href="/student_login" class="btn-secondary" style="padding: 8px 18px; font-size: 14px;">👨‍🎓 Student</a>
+            <a href="/admin_login" class="btn-primary" style="padding: 8px 18px; font-size: 14px;">🛠️ Admin Login</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero-section">
+        <div class="hero-content">
+            <span class="hero-tag">Smart AI Grievance Classification</span>
+            <h1 class="hero-title">AI-Powered <span>Student Complaint</span> Management</h1>
+            <p class="hero-subtitle">
+                EduSort is a next-generation portal for Vel Tech College. It automatically classifies student grievances, assigns resolving cleaner teams dynamically, and sends immediate notifications for fast resolutions.
+            </p>
+            <div class="hero-ctas">
+                <a href="/student_login" class="btn-primary">👨‍🎓 Student Login Portal</a>
+                <a href="/track" class="btn-secondary">🔍 Track Complaint Status</a>
+            </div>
+        </div>
+        
+        <div class="hero-image-block">
+            <div class="hero-illustration">
+                <div class="hero-illustration-icon">🧠</div>
+                <h3>Intelligent Routing</h3>
+                <p>Submit your grievances in simple plain English. Our machine learning models will identify the category and direct it to the right department in milliseconds.</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- How EduSort Works Section -->
+    <section class="steps-section">
+        <div class="section-header">
+            <h2>How EduSort Works</h2>
+            <p>A quick overview of the end-to-end complaint logging and automated resolution workflow.</p>
+        </div>
+        
+        <div class="steps-timeline">
+            <div class="step-item">
+                <div class="step-num">1</div>
+                <h3>OTP Verification</h3>
+                <p>Students log in securely via their Vel Tech college email OTP verification.</p>
+            </div>
+            
+            <div class="step-item">
+                <div class="step-num">2</div>
+                <h3>Submit Grievance</h3>
+                <p>Type your concern in natural language, choose a priority, and submit it.</p>
+            </div>
+            
+            <div class="step-item">
+                <div class="step-num">3</div>
+                <h3>ML Classification</h3>
+                <p>AI models classify the complaint and automatically assign a resolver/cleaner.</p>
+            </div>
+            
+            <div class="step-item">
+                <div class="step-num">4</div>
+                <h3>Instant Actions</h3>
+                <p>System dispatches SMS/calls to cleaners and tracks resolution live.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section">
+        <div class="section-header">
+            <h2>Key Platform Features</h2>
+            <p>EduSort is built to make campus grievance resolution smooth and accountable.</p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🔍</div>
+                <h3>Smart Classifier</h3>
+                <p>Utilizes TF-IDF and Naive Bayes classifiers to predict categories (Academic, Hostel, Amenities) with high accuracy.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🧹</div>
+                <h3>Dynamic Cleaning Dispatch</h3>
+                <p>Finds hostel or campus area cleaners dynamically and notifies them immediately using automated alerts.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Admin Analytics</h3>
+                <p>Advanced admin control room displaying status metrics, department distributions, and response timers.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Section -->
+    <footer class="landing-footer">
+        <div class="landing-footer-grid">
+            <div class="landing-footer-brand">
+                <h2>EduSort</h2>
+                <p>Vel Tech High Tech Engineering College</p>
+            </div>
+            <div>
+                <p style="font-size:14px; color:var(--accent);">AI-Driven Complaint Redressal System</p>
+            </div>
+        </div>
+        <div class="landing-footer-copy">
+            Powered by <b>EduSort</b> | © 2026 Vel Tech High Tech. All rights reserved.
+        </div>
+    </footer>
+
+</body>
+</html>

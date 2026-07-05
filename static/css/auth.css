@@ -1,0 +1,166 @@
+/* ==========================================================================
+   EDUSORT AUTH & LOGIN CSS (auth.css)
+   ========================================================================== */
+
+.auth-body {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0284c7 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.auth-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.auth-logo-block {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.auth-logo-block img {
+  height: 60px;
+  width: auto;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.auth-logo-block h2 {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--primary-dark);
+  letter-spacing: -0.5px;
+}
+
+.auth-logo-block p {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.auth-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* OTP block layout */
+.otp-input-group {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 25px 0;
+}
+
+.otp-digit {
+  width: 46px;
+  height: 52px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  transition: var(--transition);
+}
+
+.otp-digit:focus {
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px var(--accent-light);
+  outline: none;
+}
+
+.otp-countdown-wrap {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+#countdown {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  background-color: var(--accent-light);
+  padding: 6px 12px;
+  border-radius: 99px;
+  display: inline-block;
+}
+
+.otp-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 25px;
+  font-size: 13px;
+}
+
+.otp-actions span {
+  color: var(--text-muted);
+}
+
+.otp-resend-btn {
+  color: var(--primary-light);
+  text-decoration: none;
+  font-weight: 600;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.otp-resend-btn.disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.otp-resend-btn:not(.disabled):hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+/* Domain tag hint helper */
+.domain-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: -12px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.domain-hint strong {
+  color: var(--primary);
+}
+
+/* Footer elements */
+.auth-footer {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  margin-top: 25px;
+}
+
+.back-to-home {
+  display: block;
+  text-align: center;
+  margin-top: 20px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 13px;
+  transition: var(--transition);
+}
+
+.back-to-home:hover {
+  color: var(--primary);
+}

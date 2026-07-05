@@ -1,0 +1,111 @@
+/* =====================================================
+   COMPLAINT FORM PAGE — BLUE & WHITE GLOW (SCOPED)
+   ===================================================== */
+
+.complaint-page {
+    background:
+        radial-gradient(circle at top, rgba(30,136,201,0.12), transparent 60%),
+        #f9fbfd;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* ---------- Logo ---------- */
+.complaint-logo {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.complaint-logo img {
+    height: 120px;
+    width: auto;
+}
+
+/* ---------- Header ---------- */
+.complaint-header-title {
+    font-size: 40px;
+    font-weight: bold;
+    text-align: center;
+    padding: 22px;
+    background: linear-gradient(90deg, #1e88c9, #0f4c81);
+    color: #ffffff;
+    margin-top: 15px;
+}
+
+/* ---------- Container ---------- */
+.complaint-container {
+    max-width: 420px;
+    margin: 50px auto;
+    background: #ffffff;
+    padding: 32px;
+    border-radius: 16px;
+    text-align: center;
+
+    /* BLUE-WHITE GLOW */
+    box-shadow:
+        0 12px 30px rgba(15, 76, 129, 0.15),
+        0 0 22px rgba(30, 136, 201, 0.12);
+}
+
+.complaint-container h2 {
+    margin-bottom: 22px;
+    color: #0f4c81;
+    font-weight: 600;
+}
+
+/* ---------- Email ---------- */
+.complaint-email {
+    font-size: 14px;
+    margin-bottom: 14px;
+    color: #374151;
+}
+
+/* ---------- Label ---------- */
+.complaint-container label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+/* ---------- Textarea ---------- */
+.complaint-container textarea {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+    resize: none;
+    box-sizing: border-box;
+    margin-bottom: 22px;
+}
+
+/* ---------- Button ---------- */
+.complaint-container button {
+    width: 100%;
+    padding: 13px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background-color: #1e88c9;
+    color: #ffffff;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+
+    /* GLOW */
+    box-shadow: 0 0 14px rgba(30, 136, 201, 0.45);
+}
+
+.complaint-container button:hover {
+    background-color: #0f4c81;
+    box-shadow: 0 0 20px rgba(30, 136, 201, 0.65);
+}
+
+/* ---------- Footer ---------- */
+.complaint-footer {
+    text-align: center;
+    font-size: 13px;
+    margin: 40px 0;
+    color: #4b5563;
+}

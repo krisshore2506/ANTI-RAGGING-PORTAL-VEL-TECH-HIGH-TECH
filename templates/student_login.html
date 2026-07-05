@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Login - EduSort</title>
+    
+    <!-- Link styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body class="auth-body">
+
+    <div class="auth-card">
+        <!-- Brand Logo Block -->
+        <div class="auth-logo-block">
+            <a href="/" style="text-decoration: none;">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="EduSort Logo">
+                <h2>EduSort</h2>
+            </a>
+            <p>Vel Tech Student Grievance Portal</p>
+        </div>
+
+        <h3 class="auth-title">👨‍🎓 Student Authentication</h3>
+
+        <form method="POST" action="/send_otp">
+            <div class="form-group">
+                <label for="email-input">College Email ID</label>
+                <input
+                    type="email"
+                    id="email-input"
+                    class="form-control"
+                    name="email"
+                    placeholder="name123@velhightech.com"
+                    required
+                >
+            </div>
+            
+            <div class="domain-hint">
+                <span>⚠️ Note: Access is limited only to <strong>@velhightech.com</strong> email addresses.</span>
+            </div>
+
+            <button type="submit" class="btn-primary" style="width: 100%;">Send Verification OTP</button>
+        </form>
+        
+        <a href="/" class="back-to-home">← Back to Home</a>
+    </div>
+
+</body>
+</html>

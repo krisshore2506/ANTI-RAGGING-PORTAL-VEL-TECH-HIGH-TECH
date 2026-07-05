@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complaint Submitted - EduSort</title>
+    
+    <!-- Link styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body class="dashboard-layout">
+
+    <!-- Header Navbar -->
+    <header class="dashboard-header">
+        <a href="/student_dashboard" class="header-brand">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="EduSort Logo">
+            <h1>EduSort</h1>
+        </a>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="dashboard-main">
+        
+        <div class="container-box success-card">
+            
+            <!-- Checkmark Icon -->
+            <div class="success-icon-check">✓</div>
+            
+            <h2 style="font-size: 24px; font-weight: 800; color: var(--status-resolved); margin-bottom: 10px;">Submission Successful!</h2>
+            <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 30px;">Your complaint has been successfully registered and routed by the AI system.</p>
+            
+            <div style="background-color: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; text-align: left; margin-bottom: 30px;">
+                <p style="margin-bottom: 8px; font-size: 14px;"><strong>Ticket ID:</strong> <span style="font-family: monospace; font-size: 16px; font-weight: 600; color: var(--primary-dark);">#{{ complaint_id }}</span></p>
+                <p style="margin-bottom: 8px; font-size: 14px;"><strong>AI Classification:</strong> <span class="badge badge-open" style="text-transform: none; letter-spacing: 0;">{{ category }}</span></p>
+                <p style="font-size: 14px; margin-bottom: 0;"><strong>Status:</strong> <span class="badge badge-progress">Open / Assigned</span></p>
+            </div>
+
+            <!-- Cleaning Auto-assignment Details -->
+            {% if is_cleaning %}
+                <div class="cleaner-detail-box">
+                    <h3>🧹 Automated Cleaner Dispatched</h3>
+                    <p>The system has routed this request to the designated area cleaning personnel. An automated SMS/Call alert has been dispatched.</p>
+                    
+                    <div style="margin-top: 15px; border-top: 1px solid rgba(14, 116, 144, 0.15); padding-top: 15px;">
+                        <p style="margin-bottom: 6px;"><strong>Assigned Cleaner:</strong> {{ cleaner_name }}</p>
+                        <p style="margin-bottom: 0;"><strong>Contact Mobile:</strong> {{ cleaner_phone }}</p>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Actions Row -->
+            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 40px; flex-wrap: wrap;">
+                <a href="/track?id={{ complaint_id }}" class="btn-primary">🔍 Track Progress</a>
+                <a href="/student_dashboard" class="btn-secondary">⬅ Back to Dashboard</a>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="dashboard-footer">
+        Powered by <b>EduSort AI</b> | Vel Tech High Tech Engineering College | © 2026
+    </footer>
+
+</body>
+</html>

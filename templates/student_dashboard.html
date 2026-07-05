@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - EduSort</title>
+    
+    <!-- Link styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body class="dashboard-layout">
+
+    <!-- Header Navbar -->
+    <header class="dashboard-header">
+        <a href="/" class="header-brand">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="EduSort Logo">
+            <h1>EduSort</h1>
+        </a>
+        <div class="header-user">
+            <span class="user-email">👨‍🎓 {{ email }}</span>
+            <a href="/student_logout" class="btn-secondary" style="padding: 6px 14px; font-size: 13px; border-color: #ef4444; color: #ef4444;">🚪 Logout</a>
+        </div>
+    </header>
+
+    <!-- Main Dashboard Body -->
+    <main class="dashboard-main">
+        
+        <!-- Welcome Banner -->
+        <div class="welcome-banner">
+            <h2>Welcome Back!</h2>
+            <p>File grievances, monitor resolution pathways, and keep track of campus operations in real time.</p>
+        </div>
+
+        <!-- Statistics Counter Cards -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon-wrap total">📋</div>
+                <div class="stat-data">
+                    <h3>Total Filed</h3>
+                    <div class="stat-number">{{ total }}</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon-wrap open">🔔</div>
+                <div class="stat-data">
+                    <h3>Open</h3>
+                    <div class="stat-number">{{ open_count }}</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon-wrap progress">⏳</div>
+                <div class="stat-data">
+                    <h3>In Progress</h3>
+                    <div class="stat-number">{{ in_progress }}</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon-wrap resolved">✅</div>
+                <div class="stat-data">
+                    <h3>Resolved</h3>
+                    <div class="stat-number">{{ resolved }}</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Action Panels -->
+        <section class="actions-wrap">
+            <h3 class="actions-title">Grievance Actions</h3>
+            <div class="actions-buttons">
+                <button class="btn-primary" onclick="location.href='/complaint_form'">
+                    ➕ Raise a New Complaint
+                </button>
+                <button class="btn-secondary" onclick="location.href='/track'">
+                    🔍 Enter Ticket ID to Track
+                </button>
+            </div>
+        </section>
+
+        <!-- Complaint History List -->
+        <section class="history-wrap">
+            <div class="history-header">
+                <h2>Your Complaint History</h2>
+            </div>
+            
+            {% if complaints %}
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Ticket ID</th>
+                                <th>Complaint Title</th>
+                                <th>Department / Category</th>
+                                <th>Priority</th>
+                                <th>Assigned Resolver</th>
+                                <th>Status</th>
+                                <th>Filed On</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in complaints %}
+                                <tr>
+                                    <td style="font-weight: 600;">#{{ c.id }}</td>
+                                    <td>{{ c.complaint_title or "General Grievance" }}</td>
+                                    <td>{{ c.department }}</td>
+                                    <td>
+                                        <span class="prio-badge prio-{{ c.priority|lower if c.priority else 'medium' }}">
+                                            {{ c.priority or 'Medium' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if c.assigned_cleaner and c.assigned_cleaner != "Not Assigned" %}
+                                            🧹 {{ c.assigned_cleaner }}
+                                        {% else %}
+                                            <span style="color: var(--text-muted);">None</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-{{ c.status|lower|replace(' ', '-') }}">
+                                            {{ c.status }}
+                                        </span>
+                                    </td>
+                                    <td style="font-size: 13px; color: var(--text-muted);">
+                                        {{ c.timestamp.strftime('%d %b %Y, %H:%M') if c.timestamp else 'N/A' }}
+                                    </td>
+                                    <td>
+                                        <a href="/track?id={{ c.id }}" class="btn-secondary" style="padding: 6px 12px; font-size: 12px;">Track</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <span class="empty-icon">📁</span>
+                    <h3>No complaints found</h3>
+                    <p>You have not submitted any complaints yet. Use the "Raise a New Complaint" button above to log one.</p>
+                </div>
+            {% endif %}
+        </section>
+        
+    </main>
+
+    <!-- Footer -->
+    <footer class="dashboard-footer">
+        Powered by <b>EduSort AI</b> | Vel Tech High Tech Engineering College | © 2026
+    </footer>
+
+</body>
+</html>
