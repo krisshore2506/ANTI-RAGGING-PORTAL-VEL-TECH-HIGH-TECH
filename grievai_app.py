@@ -154,6 +154,7 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 # ================= ADMIN CREDENTIALS =================
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+DEMO_OTP_MODE = True
 
 # ================= HELPER: SEND OTP EMAIL =================
 def send_otp_email(email, otp):
@@ -196,6 +197,12 @@ def send_otp():
     session["email"] = email
     session["otp_time"] = time.time()
 
+    # Demo mode for Render / online deployment
+    if DEMO_OTP_MODE:
+        flash(f"Demo OTP generated successfully.", "success")
+        return redirect(url_for("verify_otp_page"))
+
+    # Normal email OTP mode
     try:
         send_otp_email(email, otp)
         return redirect(url_for("verify_otp_page"))
@@ -243,10 +250,12 @@ def trigger_auto_call(complaint_id, cleaner_name, phone_number):
 # ================= OTP PAGE (GET) =================
 @app.route("/verify_otp", methods=["GET"])
 def verify_otp_page():
-    return render_template("verify_otp.html", email=session.get("email"))
-
-
-
+    demo_otp = session.get("otp") if DEMO_OTP_MODE else None
+    return render_template(
+        "verify_otp.html",
+        email=session.get("email"),
+        demo_otp=demo_otp
+    )
 
 
 # ================= VERIFY OTP (POST) =================
@@ -261,7 +270,8 @@ def verify_otp():
         return redirect(url_for("student_dashboard"))
 
     flash("Invalid OTP. Please try again.", "error")
-    return render_template("verify_otp.html", email=email)
+demo_otp = session.get("otp") if DEMO_OTP_MODE else None
+return render_template("verify_otp.html", email=email, demo_otp=demo_otp)
 
 
 
