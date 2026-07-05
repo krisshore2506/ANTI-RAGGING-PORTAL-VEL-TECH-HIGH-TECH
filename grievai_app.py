@@ -20,10 +20,12 @@ account_sid = os.getenv("TWILIO_ACCOUNT_SID")
 auth_token = os.getenv("TWILIO_AUTH_TOKEN")
 twilio_number = os.getenv("TWILIO_PHONE_NUMBER")
 
-client = Client(account_sid, auth_token)
-print("Twilio SID:", account_sid)
-print("Token Loaded:", bool(auth_token))
-print("Twilio Number:", twilio_number)
+client = None
+if account_sid and auth_token:
+    client = Client(account_sid, auth_token)
+    print("Twilio configured successfully.")
+else:
+    print("Twilio not configured. SMS/call features will run in simulated mode.")
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
 
