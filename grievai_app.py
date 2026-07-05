@@ -122,9 +122,6 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
-# Demo OTP mode for Render deployment
-DEMO_OTP_MODE = False
-
 
 # ================= HELPER FUNCTIONS =================
 def send_sms_simulated(complaint_id, to_number, message):
@@ -156,7 +153,6 @@ def send_otp_email(email, otp):
     msg["To"] = email
 
     try:
-        # Gmail STARTTLS on port 587
         with smtplib.SMTP("smtp.gmail.com", 587, timeout=20) as server:
             server.ehlo()
             server.starttls()
@@ -169,6 +165,30 @@ def send_otp_email(email, otp):
     except Exception as e:
         print("OTP Email Error:", e)
         raise
+
+
+def find_cleaner(main_dept, sub_dept):
+    return Cleaner.query.filter_by(
+        department=main_dept,
+        area=sub_dept
+    ).first()
+
+
+def send_sms(to_number, message):
+    if not client:
+        print("Twilio not configured. Skipping real SMS.")
+        return False
+
+    try:
+        client.messages.create(
+            body=message,
+            from_=twilio_number,
+            to=to_number
+        )
+        return True
+    except Exception as e:
+        print("SMS Error:", e)
+        return False
 
 
 def trigger_auto_call(complaint_id, cleaner_name, phone_number):
@@ -187,10 +207,6 @@ def trigger_auto_call(complaint_id, cleaner_name, phone_number):
 
 
 def send_status_update_email(student_email, complaint_id, new_status):
-    """
-    Sends status update email to student when complaint status changes.
-    This is separate from login OTP.
-    """
     subject = f"EduSort Complaint Status Update (ID #{complaint_id})"
 
     status = new_status.strip().lower()
@@ -254,7 +270,7 @@ def send_status_update_email(student_email, complaint_id, new_status):
     </html>
     """
 
-        try:
+    try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"] = SMTP_EMAIL
@@ -298,12 +314,6 @@ def send_otp():
     session["email"] = email
     session["otp_time"] = time.time()
 
-    # Demo OTP mode for Render / testing
-    if DEMO_OTP_MODE:
-        flash("Demo OTP generated successfully.", "success")
-        return redirect(url_for("verify_otp_page"))
-
-    # Normal email OTP mode
     try:
         send_otp_email(email, otp)
         return redirect(url_for("verify_otp_page"))
@@ -312,7 +322,6 @@ def send_otp():
 
 
 # ================= OTP PAGE (GET) =================
-@app.route("/verify_otp", methods=["GET"])
 @app.route("/verify_otp", methods=["GET"])
 def verify_otp_page():
     return render_template("verify_otp.html", email=session.get("email"))
@@ -329,8 +338,8 @@ def verify_otp():
         session["verified"] = True
         return redirect(url_for("student_dashboard"))
 
-    fflash("Invalid OTP. Please try again.", "error")
-return render_template("verify_otp.html", email=email)
+    flash("Invalid OTP. Please try again.", "error")
+    return render_template("verify_otp.html", email=email)
 
 
 # ================= RESEND OTP =================
@@ -346,12 +355,12 @@ def resend_otp():
     session["otp"] = new_otp
     session["otp_time"] = time.time()
 
-    if DEMO_OTP_MODE:
-        flash("New demo OTP generated successfully.", "success")
-        return redirect(url_for("verify_otp_page"))
+    try:
+        send_otp_email(email, new_otp)
+        flash("A new OTP has been sent to your email.", "success")
+    except Exception as e:
+        flash(f"Failed to resend OTP: {e}", "error")
 
-    send_otp_email(email, new_otp)
-    flash("A new OTP has been sent to your email.", "success")
     return redirect(url_for("verify_otp_page"))
 
 
@@ -427,9 +436,6 @@ def predict():
     cleaner_phone = None
     department = None
 
-    # =====================================
-    # CASE 1: CLEANING COMPLAINT
-    # =====================================
     if is_cleaning:
         if is_hostel:
             X = hostel_vectorizer.transform([complaint_text])
@@ -449,9 +455,6 @@ def predict():
             assigned = "Not Assigned"
             cleaner_phone = "N/A"
 
-    # =====================================
-    # CASE 2: NORMAL COMPLAINT (OLD SYSTEM)
-    # =====================================
     else:
         X = vectorizer.transform([complaint_text])
         old_category = label_encoder.inverse_transform(model.predict(X))[0]
@@ -472,7 +475,6 @@ def predict():
     db.session.add(complaint)
     db.session.commit()
 
-    # -------- SEND SIMULATED SMS / CALL TO CLEANER --------
     if is_cleaning and cleaner_phone and cleaner_phone != "N/A":
         sms_message = f"""
 EduSort Cleaning Alert 🚨
@@ -562,7 +564,6 @@ def admin_logs():
 
     cleaning_complaints = cleaning_query.all()
 
-    # Escalation logic based on failed calls
     for complaint in cleaning_complaints:
         failed_calls = CallLog.query.filter(
             CallLog.complaint_id == complaint.id,

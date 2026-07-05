@@ -4,15 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OTP Verification - EduSort</title>
-    
-    <!-- Link styles -->
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
 </head>
 <body class="auth-body">
 
     <div class="auth-card">
-        <!-- Brand Logo Block -->
         <div class="auth-logo-block">
             <img src="{{ url_for('static', filename='images/logo.png') }}" alt="EduSort Logo">
             <h2>Verify Identity</h2>
@@ -20,15 +18,13 @@
         </div>
 
         <p style="font-size: 14px; text-align: center; color: var(--text-muted); margin-bottom: 25px;">
-            An OTP has been dispatched to your college email <br><strong>{{ email }}</strong>
+            An OTP has been sent to your college email <br><strong>{{ email }}</strong>
         </p>
 
-        <!-- Countdown Wrap -->
         <div class="otp-countdown-wrap">
             <span id="countdown">Calculating timer...</span>
         </div>
 
-        <!-- Error Flash -->
         {% with messages = get_flashed_messages(category_filter=["error"]) %}
           {% if messages %}
             <div class="alert alert-error">
@@ -37,7 +33,6 @@
           {% endif %}
         {% endwith %}
 
-        <!-- Success Flash -->
         {% with messages = get_flashed_messages(category_filter=["success"]) %}
           {% if messages %}
             <div class="alert alert-success">
@@ -46,46 +41,41 @@
           {% endif %}
         {% endwith %}
 
-        <!-- Demo OTP Block -->
-               <!-- OTP Form -->
         <form method="POST" action="/verify_otp">
             <div class="form-group">
                 <label for="otp-input" style="text-align: center; display: block; font-weight: 600; margin-bottom: 10px;">
                     Enter 6-Digit OTP
                 </label>
-                <input 
-                    type="text" 
-                    id="otp-input" 
-                    class="form-control" 
-                    name="otp" 
-                    placeholder="xxxxxx" 
-                    required 
+                <input
+                    type="text"
+                    id="otp-input"
+                    class="form-control"
+                    name="otp"
+                    placeholder="xxxxxx"
+                    required
                     maxlength="6"
                     style="letter-spacing: 6px; text-align: center; font-size: 20px; font-weight: 700; color: var(--primary-dark);"
                 >
             </div>
-            
+
             <button type="submit" class="btn-primary" style="width: 100%; margin-top: 10px;">
                 Verify & Access Portal
             </button>
         </form>
 
-        <!-- Resend actions -->
         <div class="otp-actions">
             <span>Didn't receive email?</span>
             <a href="/resend_otp" id="resend-btn" class="otp-resend-btn disabled">Resend OTP</a>
         </div>
-        
+
         <a href="/student_login" class="back-to-home">← Back to Login</a>
     </div>
 
-    <!-- Script for timer and resend activation -->
     <script>
         let timeLeft = 60;
         const countdownElement = document.getElementById("countdown");
         const resendBtn = document.getElementById("resend-btn");
-        
-        // Disable click on disabled resend button initially
+
         resendBtn.addEventListener('click', function(e) {
             if (resendBtn.classList.contains('disabled')) {
                 e.preventDefault();
@@ -98,8 +88,6 @@
                 countdownElement.textContent = "OTP Expired";
                 countdownElement.style.backgroundColor = "#fee2e2";
                 countdownElement.style.color = "#ef4444";
-
-                // Enable resend button
                 resendBtn.classList.remove("disabled");
             } else {
                 let minutes = Math.floor(timeLeft / 60);
