@@ -123,7 +123,7 @@ ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
 # Demo OTP mode for Render deployment
-DEMO_OTP_MODE = True
+DEMO_OTP_MODE = False
 
 
 # ================= HELPER FUNCTIONS =================
@@ -147,42 +147,28 @@ def send_sms_simulated(complaint_id, to_number, message):
 
 
 def send_otp_email(email, otp):
-    """
-    Used only when DEMO_OTP_MODE = False.
-    """
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        raise ValueError("SMTP_EMAIL or SMTP_PASSWORD is missing")
+
     msg = MIMEText(f"Your OTP is {otp}. It expires in 1 minute.", "plain")
     msg["Subject"] = "EduSort OTP Verification"
     msg["From"] = SMTP_EMAIL
     msg["To"] = email
 
-    # Added timeout to avoid hanging forever
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as server:
-        server.login(SMTP_EMAIL, SMTP_PASSWORD)
-        server.send_message(msg)
-
-
-def find_cleaner(main_dept, sub_dept):
-    return Cleaner.query.filter_by(
-        department=main_dept,
-        area=sub_dept
-    ).first()
-
-
-def send_sms(to_number, message):
-    if not client:
-        print("Twilio not configured. Skipping real SMS.")
-        return False
-
     try:
-        client.messages.create(
-            body=message,
-            from_=twilio_number,
-            to=to_number
-        )
-        return True
+        # Gmail STARTTLS on port 587
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=20) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.send_message(msg)
+
+        print(f"OTP email sent successfully to {email}")
+
     except Exception as e:
-        print("SMS Error:", e)
-        return False
+        print("OTP Email Error:", e)
+        raise
 
 
 def trigger_auto_call(complaint_id, cleaner_name, phone_number):
@@ -268,16 +254,21 @@ def send_status_update_email(student_email, complaint_id, new_status):
     </html>
     """
 
-    try:
+        try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"] = SMTP_EMAIL
         msg["To"] = student_email
         msg.attach(MIMEText(html_body, "html"))
 
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as server:
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=20) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
             server.login(SMTP_EMAIL, SMTP_PASSWORD)
             server.send_message(msg)
+
+        print(f"Status update email sent to {student_email}")
 
     except Exception as e:
         print("Status email error:", e)

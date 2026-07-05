@@ -47,18 +47,7 @@
         {% endwith %}
 
         <!-- Demo OTP Block -->
-        {% if demo_otp %}
-        <div style="margin: 18px 0; padding: 14px; border-radius: 12px; background: #eef6ff; border: 1px solid #90caf9; text-align: center;">
-            <p style="margin: 0; font-size: 14px; color: #0f172a; font-weight: 600;">
-                Demo OTP for testing:
-            </p>
-            <p style="margin: 8px 0 0; font-size: 28px; font-weight: 800; letter-spacing: 4px; color: #1d4ed8;">
-                {{ demo_otp }}
-            </p>
-        </div>
-        {% endif %}
-
-        <!-- OTP Form -->
+               <!-- OTP Form -->
         <form method="POST" action="/verify_otp">
             <div class="form-group">
                 <label for="otp-input" style="text-align: center; display: block; font-weight: 600; margin-bottom: 10px;">
