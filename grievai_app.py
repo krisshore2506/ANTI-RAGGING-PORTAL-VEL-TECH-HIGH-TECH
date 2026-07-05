@@ -9,13 +9,14 @@ import smtplib
 import random
 import time
 import os
-from twilio.rest import Client
-import os
-from dotenv import load_dotenv
 import sqlite3
+
+from twilio.rest import Client
+from dotenv import load_dotenv
 
 load_dotenv()
 
+# ================= TWILIO CONFIG =================
 account_sid = os.getenv("TWILIO_ACCOUNT_SID")
 auth_token = os.getenv("TWILIO_AUTH_TOKEN")
 twilio_number = os.getenv("TWILIO_PHONE_NUMBER")
@@ -26,27 +27,6 @@ if account_sid and auth_token:
     print("Twilio configured successfully.")
 else:
     print("Twilio not configured. SMS/call features will run in simulated mode.")
-from email.mime.text import MIMEText
-from dotenv import load_dotenv
-
-load_dotenv()
-def send_sms_simulated(complaint_id, to_number, message):
-    conn = sqlite3.connect("complaints.db")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        INSERT INTO sms_logs (complaint_id, to_number, message, status, timestamp)
-        VALUES (?, ?, ?, ?, ?)
-    """, (
-        complaint_id,
-        to_number,
-        message,
-        "Sent (Simulated)",
-        datetime.now()
-    ))
-
-    conn.commit()
-    conn.close()
 
 
 # ================= LOAD NEW ML MODELS =================
@@ -65,12 +45,7 @@ with open("hostel_model.pkl", "rb") as f:
 with open("hostel_vectorizer.pkl", "rb") as f:
     hostel_vectorizer = pickle.load(f)
 
-
-# Keywords to detect Hostel Complaints
-HOSTEL_KEYWORDS = [
-    "hostel", "room", "bed", "warden", "mess",
-    "block", "floor", "corridor", "common room"
-]
+# Legacy Complaint Model
 with open("complaints_model.pkl", "rb") as f:
     model = pickle.load(f)
 
@@ -96,35 +71,27 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
-# ================= DATABASE MODEL =================
-# ================= DATABASE MODEL =================
-
+# ================= DATABASE MODELS =================
 class Complaint(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_email = db.Column(db.String(120), nullable=False)
-    complaint_title = db.Column(db.String(150), nullable=True)  # 🔥 NEW FIELD
+    complaint_title = db.Column(db.String(150), nullable=True)
     complaint_text = db.Column(db.Text, nullable=False)
     department = db.Column(db.String(100), nullable=False)
     assigned_cleaner = db.Column(db.String(100))
     status = db.Column(db.String(20), default="Open")
     priority = db.Column(db.String(20), default="Medium")
     escalation_level = db.Column(db.Integer, default=0)
-    admin_remarks = db.Column(db.Text, nullable=True)  # 🔥 NEW FIELD
+    admin_remarks = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
+
 class Cleaner(db.Model):
-
     id = db.Column(db.Integer, primary_key=True)
-
     name = db.Column(db.String(100), nullable=False)
-
-    department = db.Column(db.String(50), nullable=False)
-    # Hostel / Campus
-
-    area = db.Column(db.String(100), nullable=False)
-    # Hostel_Room / Campus_Lab / etc.
-
+    department = db.Column(db.String(50), nullable=False)   # Hostel / Campus
+    area = db.Column(db.String(100), nullable=False)        # Hostel_Room / Campus_Lab / etc.
     phone = db.Column(db.String(20), nullable=False)
 
 
@@ -135,6 +102,7 @@ class CallLog(db.Model):
     phone_number = db.Column(db.String(20), nullable=False)
     call_status = db.Column(db.String(50), default="Triggered")
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
 
 class SMSLog(db.Model):
     __tablename__ = "sms_logs"
@@ -147,79 +115,66 @@ class SMSLog(db.Model):
     timestamp = db.Column(db.DateTime)
 
 
-# ================= EMAIL CONFIG =================
+# ================= EMAIL / ADMIN CONFIG =================
 SMTP_EMAIL = os.getenv("SMTP_EMAIL")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 
-# ================= ADMIN CREDENTIALS =================
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+
+# Demo OTP mode for Render deployment
 DEMO_OTP_MODE = True
 
-# ================= HELPER: SEND OTP EMAIL =================
+
+# ================= HELPER FUNCTIONS =================
+def send_sms_simulated(complaint_id, to_number, message):
+    conn = sqlite3.connect("complaints.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO sms_logs (complaint_id, to_number, message, status, timestamp)
+        VALUES (?, ?, ?, ?, ?)
+    """, (
+        complaint_id,
+        to_number,
+        message,
+        "Sent (Simulated)",
+        datetime.now()
+    ))
+
+    conn.commit()
+    conn.close()
+
+
 def send_otp_email(email, otp):
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+    """
+    Used only when DEMO_OTP_MODE = False.
+    """
+    msg = MIMEText(f"Your OTP is {otp}. It expires in 1 minute.", "plain")
+    msg["Subject"] = "EduSort OTP Verification"
+    msg["From"] = SMTP_EMAIL
+    msg["To"] = email
+
+    # Added timeout to avoid hanging forever
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as server:
         server.login(SMTP_EMAIL, SMTP_PASSWORD)
-        msg = MIMEText(f"Your OTP is {otp}. It expires in 1 minute.", "plain")
-        msg["Subject"] = "EduSort OTP Verification"
-        msg["From"] = SMTP_EMAIL
-        msg["To"] = email
         server.send_message(msg)
-# ================= FIND CLEANER =================
+
 
 def find_cleaner(main_dept, sub_dept):
-
     return Cleaner.query.filter_by(
         department=main_dept,
         area=sub_dept
     ).first()
 
-# ================= ROUTES =================
-
-@app.route("/")
-def home():
-    return render_template("index.html")
-
-@app.route("/student_login")
-def student_login():
-    return render_template("student_login.html")
-
-# ================= SEND OTP =================
-@app.route("/send_otp", methods=["POST"])
-def send_otp():
-    email = request.form["email"].strip()
-
-    if not email.endswith("@velhightech.com"):
-        return render_template("error.html")
-
-    otp = str(random.randint(100000, 999999))
-    session["otp"] = otp
-    session["email"] = email
-    session["otp_time"] = time.time()
-
-    # Demo mode for Render / online deployment
-    if DEMO_OTP_MODE:
-        flash(f"Demo OTP generated successfully.", "success")
-        return redirect(url_for("verify_otp_page"))
-
-    # Normal email OTP mode
-    try:
-        send_otp_email(email, otp)
-        return redirect(url_for("verify_otp_page"))
-    except Exception as e:
-        return f"OTP Error: {e}"
-
-#========🧠 FIND CLEANER FUNCTION=========
-def find_cleaner(main_dept, sub_dept):
-
-    return Cleaner.query.filter_by(
-        department=main_dept,
-        area=sub_dept
-    ).first()
 
 def send_sms(to_number, message):
+    if not client:
+        print("Twilio not configured. Skipping real SMS.")
+        return False
+
     try:
-        message = client.messages.create(
+        client.messages.create(
             body=message,
             from_=twilio_number,
             to=to_number
@@ -242,113 +197,30 @@ def trigger_auto_call(complaint_id, cleaner_name, phone_number):
 
     db.session.add(call_log)
     db.session.commit()
-
     return True
 
 
-
-# ================= OTP PAGE (GET) =================
-@app.route("/verify_otp", methods=["GET"])
-def verify_otp_page():
-    demo_otp = session.get("otp") if DEMO_OTP_MODE else None
-    return render_template(
-        "verify_otp.html",
-        email=session.get("email"),
-        demo_otp=demo_otp
-    )
-
-
-# ================= VERIFY OTP (POST) =================
-@app.route("/verify_otp", methods=["POST"])
-def verify_otp():
-    user_otp = request.form.get("otp")
-    stored_otp = session.get("otp")
-    email = session.get("email")
-
-    if user_otp == stored_otp:
-        session["verified"] = True	
-        return redirect(url_for("student_dashboard"))
-
-    flash("Invalid OTP. Please try again.", "error")
-demo_otp = session.get("otp") if DEMO_OTP_MODE else None
-return render_template("verify_otp.html", email=email, demo_otp=demo_otp)
-
-
-
-
-# ================= RESEND OTP =================
-@app.route("/resend_otp")
-def resend_otp():
-    email = session.get("email")
-
-    if not email:
-        flash("Session expired. Please login again.", "error")
-        return redirect(url_for("student_login"))
-
-    new_otp = str(random.randint(100000, 999999))
-    session["otp"] = new_otp
-    session["otp_time"] = time.time()
-
-    send_otp_email(email, new_otp)
-
-    flash("A new OTP has been sent to your email.", "success")
-    return redirect(url_for("verify_otp_page"))
-
-
-@app.route("/student_dashboard")
-def student_dashboard():
-    if not session.get("verified"):
-        return redirect(url_for("home"))
-    
-    email = session.get("email")
-    complaints = Complaint.query.filter_by(student_email=email).order_by(Complaint.timestamp.desc()).all()
-    
-    # Calculate stats
-    total = len(complaints)
-    open_count = sum(1 for c in complaints if c.status.strip().lower() == "open")
-    in_progress = sum(1 for c in complaints if "progress" in c.status.strip().lower() or "assigned" in c.status.strip().lower())
-    resolved = sum(1 for c in complaints if c.status.strip().lower() in ["resolved", "closed"])
-    
-    return render_template(
-        "student_dashboard.html",
-        email=email,
-        complaints=complaints,
-        total=total,
-        open_count=open_count,
-        in_progress=in_progress,
-        resolved=resolved
-    )
-
-
-
-
-# ================= STUDENT LOGOUT =================
-@app.route("/student_logout")
-def student_logout():
-    session.clear()   # clears verified, email, otp, everything
-    return redirect(url_for("home"))
-
 def send_status_update_email(student_email, complaint_id, new_status):
+    """
+    Sends status update email to student when complaint status changes.
+    This is separate from login OTP.
+    """
     subject = f"EduSort Complaint Status Update (ID #{complaint_id})"
 
     status = new_status.strip().lower()
 
     if "progress" in status:
         title = "Complaint In Progress"
-        message = (
-            "Your complaint is currently being reviewed and processed by our team."
-        )
-        status_color = "#f59e0b"   # amber
+        message = "Your complaint is currently being reviewed and processed by our team."
+        status_color = "#f59e0b"
 
     elif status in ["resolved", "closed"]:
         title = "Complaint Resolved"
-        message = (
-            "We are happy to inform you that your complaint has been successfully resolved."
-        )
-        status_color = "#16a34a"   # green
+        message = "We are happy to inform you that your complaint has been successfully resolved."
+        status_color = "#16a34a"
 
     else:
-        return  # no email for other statuses
+        return
 
     html_body = f"""
     <html>
@@ -401,10 +273,9 @@ def send_status_update_email(student_email, complaint_id, new_status):
         msg["Subject"] = subject
         msg["From"] = SMTP_EMAIL
         msg["To"] = student_email
-
         msg.attach(MIMEText(html_body, "html"))
 
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as server:
             server.login(SMTP_EMAIL, SMTP_PASSWORD)
             server.send_message(msg)
 
@@ -412,6 +283,125 @@ def send_status_update_email(student_email, complaint_id, new_status):
         print("Status email error:", e)
 
 
+# ================= ROUTES =================
+@app.route("/")
+def home():
+    return render_template("index.html")
+
+
+@app.route("/student_login")
+def student_login():
+    return render_template("student_login.html")
+
+
+# ================= SEND OTP =================
+@app.route("/send_otp", methods=["POST"])
+def send_otp():
+    email = request.form["email"].strip()
+
+    if not email.endswith("@velhightech.com"):
+        return render_template("error.html")
+
+    otp = str(random.randint(100000, 999999))
+    session["otp"] = otp
+    session["email"] = email
+    session["otp_time"] = time.time()
+
+    # Demo OTP mode for Render / testing
+    if DEMO_OTP_MODE:
+        flash("Demo OTP generated successfully.", "success")
+        return redirect(url_for("verify_otp_page"))
+
+    # Normal email OTP mode
+    try:
+        send_otp_email(email, otp)
+        return redirect(url_for("verify_otp_page"))
+    except Exception as e:
+        return f"OTP Error: {e}"
+
+
+# ================= OTP PAGE (GET) =================
+@app.route("/verify_otp", methods=["GET"])
+def verify_otp_page():
+    demo_otp = session.get("otp") if DEMO_OTP_MODE else None
+    return render_template(
+        "verify_otp.html",
+        email=session.get("email"),
+        demo_otp=demo_otp
+    )
+
+
+# ================= VERIFY OTP (POST) =================
+@app.route("/verify_otp", methods=["POST"])
+def verify_otp():
+    user_otp = request.form.get("otp")
+    stored_otp = session.get("otp")
+    email = session.get("email")
+
+    if user_otp == stored_otp:
+        session["verified"] = True
+        return redirect(url_for("student_dashboard"))
+
+    flash("Invalid OTP. Please try again.", "error")
+    demo_otp = session.get("otp") if DEMO_OTP_MODE else None
+    return render_template(
+        "verify_otp.html",
+        email=email,
+        demo_otp=demo_otp
+    )
+
+
+# ================= RESEND OTP =================
+@app.route("/resend_otp")
+def resend_otp():
+    email = session.get("email")
+
+    if not email:
+        flash("Session expired. Please login again.", "error")
+        return redirect(url_for("student_login"))
+
+    new_otp = str(random.randint(100000, 999999))
+    session["otp"] = new_otp
+    session["otp_time"] = time.time()
+
+    if DEMO_OTP_MODE:
+        flash("New demo OTP generated successfully.", "success")
+        return redirect(url_for("verify_otp_page"))
+
+    send_otp_email(email, new_otp)
+    flash("A new OTP has been sent to your email.", "success")
+    return redirect(url_for("verify_otp_page"))
+
+
+@app.route("/student_dashboard")
+def student_dashboard():
+    if not session.get("verified"):
+        return redirect(url_for("home"))
+
+    email = session.get("email")
+    complaints = Complaint.query.filter_by(student_email=email).order_by(Complaint.timestamp.desc()).all()
+
+    total = len(complaints)
+    open_count = sum(1 for c in complaints if c.status.strip().lower() == "open")
+    in_progress = sum(1 for c in complaints if "progress" in c.status.strip().lower() or "assigned" in c.status.strip().lower())
+    resolved = sum(1 for c in complaints if c.status.strip().lower() in ["resolved", "closed"])
+
+    return render_template(
+        "student_dashboard.html",
+        email=email,
+        complaints=complaints,
+        total=total,
+        open_count=open_count,
+        in_progress=in_progress,
+        resolved=resolved
+    )
+
+
+# ================= STUDENT LOGOUT =================
+@app.route("/student_logout")
+def student_logout():
+    session.clear()
+    return redirect(url_for("home"))
 
 
 # ================= COMPLAINT FORM =================
@@ -421,23 +411,21 @@ def complaint_form():
         return redirect(url_for("home"))
     return render_template("complaint_form.html", email=session.get("email"))
 
+
 # ================= PREDICT =================
 @app.route("/predict", methods=["POST"])
 def predict():
-
     if not session.get("verified"):
         return redirect(url_for("home"))
 
     complaint_text = request.form.get("complaint", "").strip().lower()
     complaint_title = request.form.get("title", "").strip()
     if not complaint_title:
-        # Fallback if title is empty
         complaint_title = "Complaint: " + (complaint_text[:30] + "..." if len(complaint_text) > 30 else complaint_text)
-        
+
     priority = request.form.get("priority", "Medium").strip()
     email = session.get("email")
 
-    # -------- CLEANING KEYWORDS --------
     CLEANING_KEYWORDS = [
         "dirty", "dust", "garbage", "smell", "toilet",
         "washroom", "bathroom", "clean", "waste",
@@ -450,7 +438,6 @@ def predict():
         "common room"
     ]
 
-    # -------- CHECK TYPE --------
     is_cleaning = any(word in complaint_text for word in CLEANING_KEYWORDS)
     is_hostel = any(word in complaint_text for word in HOSTEL_KEYWORDS)
 
@@ -462,27 +449,16 @@ def predict():
     # CASE 1: CLEANING COMPLAINT
     # =====================================
     if is_cleaning:
-
-        # Hostel
         if is_hostel:
-
             X = hostel_vectorizer.transform([complaint_text])
             sub_category = hostel_model.predict(X)[0]
-
             cleaner = find_cleaner("Hostel", sub_category)
-
             department = f"Hostel - {sub_category}"
-
-        # Campus
         else:
-
             X = campus_vectorizer.transform([complaint_text])
             sub_category = campus_model.predict(X)[0]
-
             cleaner = find_cleaner("Campus", sub_category)
-
             department = f"Campus - {sub_category}"
-
 
         if cleaner:
             assigned = cleaner.name
@@ -491,24 +467,16 @@ def predict():
             assigned = "Not Assigned"
             cleaner_phone = "N/A"
 
-
-       # =====================================
+    # =====================================
     # CASE 2: NORMAL COMPLAINT (OLD SYSTEM)
     # =====================================
     else:
-
         X = vectorizer.transform([complaint_text])
-
-        old_category = label_encoder.inverse_transform(
-            model.predict(X)
-        )[0]
-
+        old_category = label_encoder.inverse_transform(model.predict(X))[0]
         department = old_category
 
-    # Set initial status (if assigned cleaner, set status to Assigned)
     initial_status = "Assigned" if (is_cleaning and assigned and assigned != "Not Assigned") else "Open"
 
-    # -------- SAVE TO DATABASE --------
     complaint = Complaint(
         student_email=email,
         complaint_title=complaint_title,
@@ -522,10 +490,8 @@ def predict():
     db.session.add(complaint)
     db.session.commit()
 
-    # -------- SEND SMS TO CLEANER --------
-    # -------- SEND SMS TO CLEANER --------
+    # -------- SEND SIMULATED SMS / CALL TO CLEANER --------
     if is_cleaning and cleaner_phone and cleaner_phone != "N/A":
-
         sms_message = f"""
 EduSort Cleaning Alert 🚨
 Hello {assigned},
@@ -536,20 +502,8 @@ Complaint ID: {complaint.id}
 
 Please respond immediately.
 """
-
-        send_sms_simulated(
-            complaint.id,
-            cleaner_phone,
-            sms_message
-        )
-
-        trigger_auto_call(
-            complaint.id,
-            assigned,
-            cleaner_phone
-        )
-
-    # We do NOT clear student session here so student remains logged in!
+        send_sms_simulated(complaint.id, cleaner_phone, sms_message)
+        trigger_auto_call(complaint.id, assigned, cleaner_phone)
 
     return render_template(
         "success.html",
@@ -565,10 +519,7 @@ Please respond immediately.
 @app.route("/admin_login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
-        if (
-            request.form["email"] == ADMIN_EMAIL
-            and request.form["password"] == ADMIN_PASSWORD
-        ):
+        if request.form["email"] == ADMIN_EMAIL and request.form["password"] == ADMIN_PASSWORD:
             session["admin_logged_in"] = True
             return redirect(url_for("admin"))
 
@@ -576,6 +527,8 @@ def admin_login():
 
     return render_template("admin_login.html")
 
+
+# ================= ADMIN PANEL =================
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
     if not session.get("admin_logged_in"):
@@ -591,15 +544,14 @@ def admin():
         if complaint:
             old_status = complaint.status
             complaint.admin_remarks = remarks
-            
+
             status_changed = (old_status != new_status)
             if status_changed:
                 complaint.status = new_status
-            
+
             db.session.commit()
 
             if status_changed:
-                # 🔔 SEND STATUS UPDATE EMAIL
                 send_status_update_email(
                     complaint.student_email,
                     complaint.id,
@@ -608,33 +560,28 @@ def admin():
 
     complaints = Complaint.query.order_by(Complaint.timestamp.desc()).all()
     return render_template("admin.html", complaints=complaints)
-@app.route("/admin/logs")
+
+
+# ================= ADMIN LOGS =================
 @app.route("/admin/logs")
 def admin_logs():
-
     if not session.get("admin_logged_in"):
         return redirect(url_for("admin_login"))
 
-    # Get selected status from dropdown
     status_filter = request.args.get("status")
 
-    # Get only Cleaning complaints
     cleaning_query = Complaint.query.filter(
         Complaint.department.like("%Hostel%") |
         Complaint.department.like("%Campus%")
     )
 
-    # If a status is selected, filter it
     if status_filter:
-        cleaning_query = cleaning_query.filter(
-            Complaint.status == status_filter
-        )
+        cleaning_query = cleaning_query.filter(Complaint.status == status_filter)
 
     cleaning_complaints = cleaning_query.all()
-    # 🔥 ESCALATION LOGIC (Based on Failed Calls)
 
+    # Escalation logic based on failed calls
     for complaint in cleaning_complaints:
-
         failed_calls = CallLog.query.filter(
             CallLog.complaint_id == complaint.id,
             CallLog.call_status != "Connected"
@@ -666,9 +613,10 @@ def admin_logs():
         sms_logs=sms_logs,
         call_logs=call_logs
     )
+
+
 @app.route("/update_call_status", methods=["POST"])
 def update_call_status():
-
     if not session.get("admin_logged_in"):
         return redirect(url_for("admin_login"))
 
@@ -676,16 +624,19 @@ def update_call_status():
     new_status = request.form.get("call_status")
 
     call = CallLog.query.get(call_id)
-
     if call:
         call.call_status = new_status
         db.session.commit()
 
     return redirect(url_for("admin_logs"))
+
+
 @app.route("/admin_logout")
 def admin_logout():
     session.pop("admin_logged_in", None)
     return redirect(url_for("admin_login"))
+
+
 # ================= TRACK COMPLAINT =================
 @app.route("/track", methods=["GET", "POST"])
 def track():
@@ -710,26 +661,29 @@ def track():
     )
 
 
-
-# ================= INIT =================
+# ================= INIT / DB MIGRATION =================
 with app.app_context():
     db.create_all()
-    # Safely alter table to add complaint_title and admin_remarks if they don't exist
+
     try:
         db_path = os.path.join(BASE_DIR, "complaints.db")
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
+
         cursor.execute("PRAGMA table_info(complaint)")
         columns = [row[1] for row in cursor.fetchall()]
+
         if "complaint_title" not in columns:
             cursor.execute("ALTER TABLE complaint ADD COLUMN complaint_title VARCHAR(150)")
         if "admin_remarks" not in columns:
             cursor.execute("ALTER TABLE complaint ADD COLUMN admin_remarks TEXT")
+
         conn.commit()
         conn.close()
         print("Database schema migration completed/verified.")
     except Exception as e:
         print("Database schema migration error:", e)
+
 
 if __name__ == "__main__":
     app.run(debug=True)
