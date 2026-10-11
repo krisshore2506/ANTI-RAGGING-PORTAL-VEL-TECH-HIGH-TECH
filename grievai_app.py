@@ -656,6 +656,25 @@ def send_status_update_email(student_email, complaint_id, new_status):
         message = f"Your incident report status has been updated to: {new_status}."
         status_color = "#1e40af"
 
+    safe_status = html.escape(str(new_status).strip())
+    safe_complaint_id = html.escape(str(complaint_id).strip())
+    safe_title = html.escape(title)
+    safe_message = html.escape(message)
+
+    plain_text = (
+        "ANTI-RAGGING PORTAL - STATUS UPDATE\n"
+        "Vel Tech High Tech Dr. Rangarajan Dr. Sakunthala Engineering College\n\n"
+        f"{title}\n"
+        f"{message}\n\n"
+        f"Complaint ID: #{complaint_id}\n"
+        f"Updated Status: {new_status}\n\n"
+        "You can track your incident report status at any time on the portal using your "
+        "Reference ID and Tracking Token.\n\n"
+        "Regards,\n"
+        "Anti-Ragging Committee\n"
+        "Vel Tech High Tech Engineering College\n"
+    )
+
     html_body = f"""
     <html>
     <body style="margin:0; padding:0; background-color:#f4f6f9; font-family:Arial, sans-serif;">
@@ -668,10 +687,10 @@ def send_status_update_email(student_email, complaint_id, new_status):
             </div>
 
             <div style="padding:30px; color:#333;">
-                <h3>{title}</h3>
-                <p>{message}</p>
+                <h3>{safe_title}</h3>
+                <p>{safe_message}</p>
 
-                <p><strong>Complaint ID:</strong> #{complaint_id}</p>
+                <p><strong>Complaint ID:</strong> #{safe_complaint_id}</p>
 
                 <p>
                     <strong>Status:</strong>
@@ -684,7 +703,7 @@ def send_status_update_email(student_email, complaint_id, new_status):
                         font-weight:bold;
                         font-size:13px;
                     ">
-                        {new_status}
+                        {safe_status}
                     </span>
                 </p>
 
@@ -707,7 +726,8 @@ def send_status_update_email(student_email, complaint_id, new_status):
         msg["Subject"] = subject
         msg["From"] = SMTP_EMAIL
         msg["To"] = student_email
-        msg.attach(MIMEText(html_body, "html"))
+        msg.attach(MIMEText(plain_text, "plain", "utf-8"))
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
 
         with smtplib.SMTP("smtp.gmail.com", 587, timeout=20) as server:
             server.ehlo()
