@@ -41,12 +41,12 @@ model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred)
 
-print(f"✅ Model trained successfully")
-print(f"🎯 Accuracy: {accuracy * 100:.2f}%")
+print(f"[SUCCESS] Model trained successfully")
+print(f"[METRIC] Accuracy: {accuracy * 100:.2f}%")
 
 # Save files
 pickle.dump(model, open("complaints_model.pkl", "wb"))
 pickle.dump(vectorizer, open("vectorizer.pkl", "wb"))
 pickle.dump(label_encoder, open("label_encoder.pkl", "wb"))
 
-print("✅ Model, vectorizer, and encoder saved!")
+print("[SUCCESS] Model, vectorizer, and encoder saved!")

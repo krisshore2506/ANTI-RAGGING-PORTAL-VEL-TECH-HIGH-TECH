@@ -61,4 +61,4 @@ with app.app_context():
     db.session.add_all(cleaners)
     db.session.commit()
 
-    print("✅ General Cleaning Cleaners Added Successfully")
+    print("[SUCCESS] General Cleaning Cleaners Added Successfully")

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - EduSort</title>
+    <title>Committee Login - Anti-Ragging Portal</title>
     
     <!-- Link styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -15,19 +15,22 @@
         <!-- Brand Logo Block -->
         <div class="auth-logo-block">
             <a href="/" style="text-decoration: none;">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="EduSort Logo" style="background-color: #ffffff; padding: 2px;">
-                <h2 style="color: #ffffff;">EduSort</h2>
+                <div class="college-logo-container college-logo-container-lg">
+            <img src="{{ url_for('static', filename='images/veltech_college_logo.png') }}" alt="Vel Tech High Tech College Logo" class="college-logo">
+        </div>
+                <h2 style="color: #ffffff;">Anti-Ragging Committee</h2>
+        <p style="color: #94a3b8;">Vel Tech High Tech Engineering College</p>
             </a>
             <p style="color: #94a3b8;">College Control Room & Resolver Log</p>
         </div>
 
-        <h3 class="auth-title" style="color: #ffffff; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 12px;">🛠️ Administrative Portal</h3>
+        <h3 class="auth-title" style="color: #ffffff; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 12px;"><svg class="svg-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -3px; margin-right: 6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>Administrative Portal</h3>
 
         <!-- Flash messages -->
         {% with messages = get_flashed_messages(category_filter=["error"]) %}
           {% if messages %}
             <div class="alert alert-error" style="background-color: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); color: #fca5a5;">
-                <span>❌ {{ messages[0] }}</span>
+                <span><svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>{{ messages[0] }}</span>
             </div>
           {% endif %}
         {% endwith %}
@@ -62,7 +65,7 @@
             <button type="submit" class="btn-primary" style="width: 100%;">Verify & Authorize Login</button>
         </form>
         
-        <a href="/" class="back-to-home" style="color: #94a3b8;">← Back to Home Page</a>
+        <a href="/" class="back-to-home" style="color: #94a3b8;"><svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Back to Home Page</a>
     </div>
 
 </body>

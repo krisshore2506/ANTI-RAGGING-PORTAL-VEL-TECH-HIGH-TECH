@@ -287,3 +287,101 @@ textarea.form-control {
 .custom-table tr:hover td {
   background-color: #f8fafc;
 }
+
+
+/* ==========================================================================
+   OFFICIAL COLLEGE EMBLEM & LOGO COMMON STYLING
+   ========================================================================== */
+
+.brand-header,
+.brand-logo-block,
+.header-brand,
+.admin-brand {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 14px;
+  text-decoration: none;
+  line-height: 1;
+}
+
+.college-logo-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 86px;
+  height: 53.5px;
+  background: #000000;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.college-logo {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  display: block;
+  background: transparent;
+}
+
+/* Auth Cards Large Variant (Student Login, OTP, Admin Login, Error) */
+.college-logo-container-lg {
+  width: 130px;
+  height: 81px;
+  margin: 0 auto 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+}
+
+/* Dark Navbar container variant */
+.college-logo-container-dark {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+@media (max-width: 768px) {
+  .college-logo-container {
+    width: 68px;
+    height: 42px;
+    border-radius: 5px;
+  }
+  .brand-header,
+  .brand-logo-block,
+  .header-brand,
+  .admin-brand {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .college-logo-container {
+    width: 54px;
+    height: 33.5px;
+    border-radius: 4px;
+  }
+  .college-logo-container-lg {
+    width: 104px;
+    height: 65px;
+  }
+  .brand-header,
+  .brand-logo-block,
+  .header-brand,
+  .admin-brand {
+    gap: 8px;
+  }
+}
+/* Professional SVG Icon Helpers */
+.svg-icon {
+  display: inline-block;
+  vertical-align: -0.15em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}

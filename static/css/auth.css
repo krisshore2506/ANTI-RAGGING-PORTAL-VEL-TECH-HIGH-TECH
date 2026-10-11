@@ -29,11 +29,9 @@
 }
 
 .auth-logo-block img {
-  height: 60px;
-  width: auto;
-  border-radius: var(--radius-sm);
-  margin-bottom: 12px;
-  box-shadow: var(--shadow-sm);
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .auth-logo-block h2 {

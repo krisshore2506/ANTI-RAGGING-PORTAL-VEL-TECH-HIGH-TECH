@@ -12,7 +12,7 @@
 .dashboard-header {
   background: #ffffff;
   border-bottom: 1px solid var(--border);
-  padding: 15px 5%;
+  padding: 12px 5%;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -20,21 +20,26 @@
 }
 
 .header-brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   text-decoration: none;
 }
 
 .header-brand img {
-  height: 38px;
-  width: auto;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .header-brand h1 {
   font-size: 20px;
   font-weight: 700;
   color: var(--primary-dark);
+  margin: 0;
+  line-height: 1.2;
+  display: inline-flex;
+  align-items: center;
 }
 
 .header-user {
@@ -372,4 +377,31 @@
   text-align: center;
   font-size: 13px;
   color: var(--text-muted);
+}
+
+
+@media (max-width: 768px) {
+  .dashboard-header {
+    padding: 10px 4%;
+  }
+  .header-brand h1 {
+    font-size: 17px;
+  }
+  .header-user {
+    gap: 8px;
+  }
+  .header-user .user-email {
+    font-size: 12px;
+  }
+}
+@media (max-width: 480px) {
+  .dashboard-header {
+    padding: 8px 3%;
+  }
+  .header-brand h1 {
+    font-size: 15px;
+  }
+  .header-user .user-email {
+    display: none;
+  }
 }

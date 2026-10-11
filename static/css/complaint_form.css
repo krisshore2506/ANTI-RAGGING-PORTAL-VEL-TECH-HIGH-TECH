@@ -1,111 +1,393 @@
 /* =====================================================
-   COMPLAINT FORM PAGE — BLUE & WHITE GLOW (SCOPED)
+   ANTI-RAGGING COMPLAINT FORM & SUCCESS STYLES
    ===================================================== */
 
-.complaint-page {
-    background:
-        radial-gradient(circle at top, rgba(30,136,201,0.12), transparent 60%),
-        #f9fbfd;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;
-    padding: 0;
+.req-star {
+    color: #ef4444;
+    font-weight: 700;
 }
 
-/* ---------- Logo ---------- */
-.complaint-logo {
-    text-align: center;
-    margin-top: 20px;
+.form-section-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e2e8f0;
 }
 
-.complaint-logo img {
-    height: 120px;
-    width: auto;
-}
-
-/* ---------- Header ---------- */
-.complaint-header-title {
-    font-size: 40px;
-    font-weight: bold;
-    text-align: center;
-    padding: 22px;
-    background: linear-gradient(90deg, #1e88c9, #0f4c81);
+.section-step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    background-color: var(--primary, #1e88c9);
     color: #ffffff;
-    margin-top: 15px;
-}
-
-/* ---------- Container ---------- */
-.complaint-container {
-    max-width: 420px;
-    margin: 50px auto;
-    background: #ffffff;
-    padding: 32px;
-    border-radius: 16px;
-    text-align: center;
-
-    /* BLUE-WHITE GLOW */
-    box-shadow:
-        0 12px 30px rgba(15, 76, 129, 0.15),
-        0 0 22px rgba(30, 136, 201, 0.12);
-}
-
-.complaint-container h2 {
-    margin-bottom: 22px;
-    color: #0f4c81;
-    font-weight: 600;
-}
-
-/* ---------- Email ---------- */
-.complaint-email {
-    font-size: 14px;
-    margin-bottom: 14px;
-    color: #374151;
-}
-
-/* ---------- Label ---------- */
-.complaint-container label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: #1f2937;
-}
-
-/* ---------- Textarea ---------- */
-.complaint-container textarea {
-    width: 100%;
-    padding: 12px;
-    border-radius: 10px;
-    border: 1px solid #cbd5e1;
-    font-size: 14px;
-    resize: none;
-    box-sizing: border-box;
-    margin-bottom: 22px;
-}
-
-/* ---------- Button ---------- */
-.complaint-container button {
-    width: 100%;
-    padding: 13px;
-    font-size: 16px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    background-color: #1e88c9;
-    color: #ffffff;
-    transition: background 0.3s ease, box-shadow 0.3s ease;
-
-    /* GLOW */
-    box-shadow: 0 0 14px rgba(30, 136, 201, 0.45);
-}
-
-.complaint-container button:hover {
-    background-color: #0f4c81;
-    box-shadow: 0 0 20px rgba(30, 136, 201, 0.65);
-}
-
-/* ---------- Footer ---------- */
-.complaint-footer {
-    text-align: center;
     font-size: 13px;
-    margin: 40px 0;
-    color: #4b5563;
+    font-weight: 700;
+    border-radius: 50%;
+}
+
+.form-section-title h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary-dark, #0f4c81);
+}
+
+.field-hint {
+    color: var(--text-muted, #64748b);
+    font-size: 12px;
+    margin-top: 4px;
+    display: block;
+}
+
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 640px) {
+    .form-grid-2 {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}
+
+/* Triage Status Card */
+.triage-status-card {
+    background-color: var(--bg, #f8fafc);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: var(--radius-sm, 6px);
+    padding: 10px 14px;
+    min-height: 44px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Confidentiality Card */
+.confidentiality-card {
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-left: 4px solid #16a34a;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 18px;
+}
+
+/* Declaration Card */
+.declaration-card {
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.alert-info-note {
+    background-color: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #1e40af;
+    margin-top: 8px;
+}
+
+/* Emergency Banner Strip */
+.emergency-help-strip {
+    background: linear-gradient(90deg, #fef2f2, #fff1f2);
+    border: 1px solid #fecdd3;
+    border-radius: 8px;
+    padding: 10px 15px;
+    font-size: 12.5px;
+    color: #9f1239;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Success Page Components */
+.success-summary-box {
+    background-color: var(--bg, #f8fafc);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 10px;
+    padding: 10px 20px;
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.summary-label {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text, #334155);
+}
+
+.summary-token {
+    font-family: monospace;
+    font-size: 15px;
+    font-weight: 700;
+    background-color: #e0f2fe;
+    color: #0369a1;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid #bae6fd;
+    letter-spacing: 1px;
+}
+
+.confidential-badge {
+    font-size: 12px;
+    font-weight: 700;
+    background-color: #dcfce7;
+    color: #15803d;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.next-steps-card {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 18px 20px;
+    text-align: left;
+    margin-top: 18px;
+}
+
+.next-steps-card h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--primary-dark, #0f4c81);
+}
+
+.helpline-footer-box {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 15px 20px;
+    text-align: left;
+    margin-top: 18px;
+}
+
+.helpline-footer-box h4 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+
+/* 2-Column Summary Grid */
+.summary-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 20px;
+}
+
+@media (max-width: 600px) {
+    .summary-grid-2 {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+}
+
+/* =====================================================
+   PRINT STYLES FOR CONFIRMATION REPORT (1 A4 PAGE FIT)
+   ===================================================== */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 10mm 12mm 10mm 12mm;
+    }
+
+    html, body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        font-size: 11.5px !important;
+        line-height: 1.35 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .dashboard-layout {
+        min-height: auto !important;
+        display: block !important;
+        background: #ffffff !important;
+    }
+
+    .dashboard-header {
+        padding: 6px 0 !important;
+        margin-bottom: 6px !important;
+        border-bottom: 2px solid #0f4c81 !important;
+        background: transparent !important;
+    }
+
+    .dashboard-header .header-brand h1 {
+        font-size: 16px !important;
+        color: #0f4c81 !important;
+    }
+
+    .dashboard-header .college-logo-container {
+        width: 48px !important;
+        height: 30px !important;
+        background: #000000 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        border-radius: 3px !important;
+        box-shadow: none !important;
+    }
+
+    .dashboard-header .college-logo {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain !important;
+    }
+
+    .dashboard-header .header-brand img {
+        height: 30px !important;
+    }
+
+    .dashboard-main {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .container-box.success-card {
+        padding: 10px 14px !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .success-icon-check {
+        width: 36px !important;
+        height: 36px !important;
+        line-height: 36px !important;
+        font-size: 18px !important;
+        margin: 0 auto 4px !important;
+        box-shadow: none !important;
+    }
+
+    .success-card h2 {
+        font-size: 16px !important;
+        margin-bottom: 2px !important;
+    }
+
+    .success-card p {
+        font-size: 11.5px !important;
+        margin-bottom: 8px !important;
+    }
+
+    .success-summary-box {
+        padding: 6px 12px !important;
+        margin-bottom: 6px !important;
+        border: 1px solid #e2e8f0 !important;
+        background-color: #f8fafc !important;
+    }
+
+    .summary-grid-2 {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 3px 14px !important;
+    }
+
+    .summary-item {
+        padding: 3px 0 !important;
+        font-size: 11px !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+    }
+
+    .summary-label {
+        font-size: 11px !important;
+    }
+
+    .summary-val {
+        font-size: 13.5px !important;
+    }
+
+    .summary-token {
+        font-size: 11.5px !important;
+        padding: 1px 5px !important;
+    }
+
+    .alert-info-note {
+        margin-top: 6px !important;
+        padding: 5px 8px !important;
+        font-size: 10.5px !important;
+        border: 1px solid #bfdbfe !important;
+    }
+
+    .next-steps-card {
+        margin-top: 6px !important;
+        padding: 6px 10px !important;
+        border: 1px solid #e2e8f0 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .next-steps-card h4 {
+        font-size: 11px !important;
+        margin-bottom: 3px !important;
+    }
+
+    .next-steps-card ol {
+        font-size: 10.5px !important;
+        line-height: 1.35 !important;
+        padding-left: 14px !important;
+    }
+
+    .helpline-footer-box {
+        margin-top: 6px !important;
+        padding: 6px 10px !important;
+        border: 1px solid #e2e8f0 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .helpline-footer-box h4 {
+        font-size: 10.5px !important;
+        margin-bottom: 3px !important;
+    }
+
+    .helpline-footer-box div {
+        font-size: 10.5px !important;
+        line-height: 1.35 !important;
+    }
+
+    .success-actions {
+        display: none !important;
+    }
+
+    .dashboard-footer {
+        padding: 4px 0 !important;
+        margin-top: 6px !important;
+        font-size: 9.5px !important;
+        border-top: 1px solid #e2e8f0 !important;
+        background: transparent !important;
+    }
+
+    a {
+        text-decoration: none !important;
+        color: inherit !important;
+    }
 }

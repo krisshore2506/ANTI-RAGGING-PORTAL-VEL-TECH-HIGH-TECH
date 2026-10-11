@@ -3,100 +3,260 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EduSort - Submit Grievance</title>
+    <title>Anti-Ragging Portal - Submit Incident Report</title>
     
     <!-- Link styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/complaint_form.css') }}">
 </head>
 <body class="dashboard-layout">
 
     <!-- Header Navbar -->
     <header class="dashboard-header">
-        <a href="/student_dashboard" class="header-brand">
-            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="EduSort Logo">
-            <h1>EduSort</h1>
+        <a href="/student_dashboard" class="header-brand brand-header">
+            <div class="college-logo-container">
+            <img src="{{ url_for('static', filename='images/veltech_college_logo.png') }}" alt="Vel Tech High Tech College Logo" class="college-logo">
+        </div>
+            <h1>Anti-Ragging Portal</h1>
         </a>
         <div class="header-user">
-            <span class="user-email">👨‍🎓 {{ email }}</span>
-            <a href="/student_dashboard" class="btn-secondary" style="padding: 6px 14px; font-size: 13px;">⬅ Dashboard</a>
+            <span class="user-email"><svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"></path></svg>{{ email }}</span>
+            <a href="/student_dashboard" class="btn-secondary" style="padding: 6px 14px; font-size: 13px;"><svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Dashboard</a>
         </div>
     </header>
 
     <!-- Main Content Form Container -->
-    <main class="dashboard-main" style="max-width: 750px;">
+    <main class="dashboard-main" style="max-width: 820px;">
         
-        <div class="container-box" style="padding: 40px;">
-            <h2 style="font-size: 22px; font-weight: 700; color: var(--primary-dark); margin-bottom: 8px;">Raise a New Grievance</h2>
-            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;">Describe the issue clearly. Our AI will automatically categorize and assign the right resolver.</p>
+        <div class="container-box" style="padding: 35px 40px;">
+            <div style="border-bottom: 1px solid var(--border); padding-bottom: 18px; margin-bottom: 25px;">
+                <span class="badge badge-escalated" style="font-size: 11px; margin-bottom: 8px;">UGC Anti-Ragging Cell</span>
+                <h2 style="font-size: 24px; font-weight: 700; color: var(--primary-dark); margin: 6px 0;">Anti-Ragging Incident Reporting Form</h2>
+                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 0; line-height: 1.5;">
+                    Every student has the statutory right to an educational environment free from hazing, harassment, and coercion. All submissions are reviewed promptly and discreetly by the College Anti-Ragging Committee.
+                </p>
+            </div>
 
-            <form method="POST" action="/predict" id="complaint-form">
+            <!-- Flash Error Messages -->
+            {% with messages = get_flashed_messages(category_filter=["error"]) %}
+              {% if messages %}
+                <div class="alert alert-error" style="margin-bottom: 25px;">
+                    <span><svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>{{ messages[0] }}</span>
+                </div>
+              {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="/predict" id="complaint-form" novalidate>
                 
-                <!-- Complaint Title -->
+                <!-- Section 1: Incident Categorization -->
+                <div class="form-section-title">
+                    <span class="section-step">1</span>
+                    <h3>Incident Classification</h3>
+                </div>
+
                 <div class="form-group">
-                    <label for="title-input">Grievance Title / Subject</label>
+                    <label for="category-select">Incident Category <span class="req-star">*</span></label>
+                    <select id="category-select" class="form-control" name="incident_type" required>
+                        <option value="" disabled selected>-- Select Incident Category --</option>
+                        <option value="Verbal or emotional harassment">Verbal or emotional harassment</option>
+                        <option value="Physical ragging">Physical ragging</option>
+                        <option value="Hostel hazing or coercion">Hostel hazing or coercion</option>
+                        <option value="Cyber-ragging">Cyber-ragging</option>
+                        <option value="Financial extortion">Financial extortion</option>
+                        <option value="Other / unsure">Other / unsure</option>
+                    </select>
+                    <small class="field-hint">Select the category that best captures the primary nature of the incident.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="title-input">Incident Subject / Brief Headline <span class="req-star">*</span></label>
                     <input 
                         type="text" 
                         id="title-input" 
                         class="form-control" 
                         name="title" 
-                        placeholder="e.g. Water leakage in Block B toilet, Broken bench in Lab 2" 
+                        placeholder="e.g. Verbal abuse and intimidation in Hostel Block C hallway" 
                         required
                     >
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                    <!-- Location Selector -->
+                <!-- Section 2: Time & Location -->
+                <div class="form-section-title" style="margin-top: 30px;">
+                    <span class="section-step">2</span>
+                    <h3>When & Where Did It Occur?</h3>
+                </div>
+
+                <div class="form-grid-2">
                     <div class="form-group">
-                        <label for="location-select">Hostel / Campus Location</label>
-                        <select id="location-select" class="form-control" name="location">
-                            <option value="General">General / Other</option>
-                            <option value="Hostel Room">Hostel Room</option>
-                            <option value="Hostel Corridor">Hostel Corridor</option>
-                            <option value="Campus Lab">Campus Laboratory</option>
-                            <option value="Classroom">Classroom Block</option>
-                            <option value="Library">Library Building</option>
-                            <option value="Mess Hall">Mess Hall / Canteen</option>
-                        </select>
+                        <label for="datetime-input">Incident Date & Approximate Time <span class="req-star">*</span></label>
+                        <input 
+                            type="text" 
+                            id="datetime-input" 
+                            class="form-control" 
+                            name="incident_date_time" 
+                            placeholder="e.g. 2026-10-09, approx. 9:30 PM" 
+                            required
+                        >
+                        <small class="field-hint">Specify when the occurrence took place.</small>
                     </div>
 
-                    <!-- Priority Level -->
                     <div class="form-group">
-                        <label for="priority-select">Grievance Priority</label>
-                        <select id="priority-select" class="form-control" name="priority">
-                            <option value="Low">Low</option>
-                            <option value="Medium" selected>Medium</option>
-                            <option value="High">High</option>
+                        <label for="location-select">Primary Location <span class="req-star">*</span></label>
+                        <select id="location-select" class="form-control" name="location" required>
+                            <option value="Hostel Room">Hostel Room</option>
+                            <option value="Hostel Corridor / Wing">Hostel Corridor / Wing</option>
+                            <option value="Canteen / Mess Hall">Canteen / Mess Hall</option>
+                            <option value="Campus Laboratory">Campus Laboratory</option>
+                            <option value="Classroom Block">Classroom Block</option>
+                            <option value="Library Building">Library Building</option>
+                            <option value="College Ground / Sports Complex">College Ground / Sports Complex</option>
+                            <option value="College Bus / Transport">College Bus / Transport</option>
+                            <option value="Off-campus / Outside College Gate">Off-campus / Outside Gate</option>
+                            <option value="Online / Social Media Platform">Online / Social Media</option>
+                            <option value="Other Location">Other Campus Area</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- Complaint Description -->
                 <div class="form-group">
-                    <label for="complaint-text-input">Detailed Description</label>
+                    <label for="location-details-input">Specific Location Details (Optional)</label>
+                    <input 
+                        type="text" 
+                        id="location-details-input" 
+                        class="form-control" 
+                        name="location_details" 
+                        placeholder="e.g. Block B, 2nd Floor, Room 204 or WhatsApp Group 'Batch 2026'"
+                    >
+                </div>
+
+                <!-- Section 3: Incident Narrative -->
+                <div class="form-section-title" style="margin-top: 30px;">
+                    <span class="section-step">3</span>
+                    <h3>Incident Details</h3>
+                </div>
+
+                <div class="form-group">
+                    <label for="complaint-text-input">Detailed Chronological Description <span class="req-star">*</span></label>
                     <textarea 
                         id="complaint-text-input" 
                         class="form-control" 
                         name="complaint" 
-                        rows="5" 
-                        placeholder="Kindly describe your complaints below in detail. Mention block, floor, or any specific tags if relevant…" 
+                        rows="6" 
+                        placeholder="Describe what occurred in your own words. Mention exact words used, physical gestures, demands made, duration, and any immediate consequences..." 
                         required
                     ></textarea>
                 </div>
 
-                <!-- Hidden element used to combine inputs before submit -->
-                <input type="hidden" name="combined_text" id="hidden-combined-text">
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="priority-select">Requested Urgency / Priority</label>
+                        <select id="priority-select" class="form-control" name="priority">
+                            <option value="Low">Low - Informational / Ongoing Concern</option>
+                            <option value="Medium" selected>Medium - Requires Formal Intervention</option>
+                            <option value="High">High - Immediate Safety Concern / Urgent</option>
+                        </select>
+                    </div>
 
-                <!-- Interactive AI Preview Panel -->
-                <div id="live-preview-box" class="remarks-card" style="display: none; margin-bottom: 25px; border-left-color: var(--accent);">
-                    <h4>🧠 AI Smart Routing Assistant</h4>
-                    <p style="font-size: 13px; margin-bottom: 8px; color: var(--text-muted);">Based on your description, this complaint will be classified as:</p>
-                    <span id="preview-category" class="badge">Checking...</span>
+                    <!-- Live Triage Preview Card -->
+                    <div class="form-group">
+                        <label>Triage Queue Indicator</label>
+                        <div id="live-preview-box" class="triage-status-card">
+                            <span id="preview-category" class="badge badge-open">Provisional Triage: Standard Priority</span>
+                            <small class="field-hint" style="display:block; margin-top: 4px;">
+                                Automated queue prioritization aid for the committee; not a finding of fact.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Persons Involved (Optional) -->
+                <div class="form-section-title" style="margin-top: 30px;">
+                    <span class="section-step">4</span>
+                    <h3>Persons Involved (Optional)</h3>
+                </div>
+
+                <div class="form-group">
+                    <label for="accused-input">Alleged Perpetrator(s) Details</label>
+                    <textarea 
+                        id="accused-input" 
+                        class="form-control" 
+                        name="accused_details" 
+                        rows="2" 
+                        placeholder="Names, roll numbers, department/year, nicknames, or physical descriptions (if known)"
+                    ></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="witness-input">Witness Details</label>
+                    <textarea 
+                        id="witness-input" 
+                        class="form-control" 
+                        name="witness_details" 
+                        rows="2" 
+                        placeholder="Names, roll numbers, or contact info of any students or staff present"
+                    ></textarea>
+                </div>
+
+                <!-- Section 5: Confidentiality & Protection -->
+                <div class="form-section-title" style="margin-top: 30px;">
+                    <span class="section-step">5</span>
+                    <h3>Confidentiality & Declarations</h3>
+                </div>
+
+                <!-- Confidentiality Option Callout -->
+                <div class="confidentiality-card">
+                    <div style="display: flex; gap: 12px; align-items: flex-start;">
+                        <input 
+                            type="checkbox" 
+                            id="confidential-check" 
+                            name="is_confidential" 
+                            value="true" 
+                            style="margin-top: 4px; width: 18px; height: 18px; cursor: pointer;"
+                        >
+                        <div>
+                            <label for="confidential-check" style="font-weight: 700; color: #0f4c81; margin-bottom: 4px; display: block; cursor: pointer;">
+                                <svg class="svg-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>Request Confidential Committee Handling
+                            </label>
+                            <p style="font-size: 13px; color: #374151; margin-bottom: 6px; line-height: 1.45;">
+                                When enabled, your identity is masked in general committee logs and disclosed strictly on a need-to-know basis to the <strong>Anti-Ragging Committee Chairperson and Principal</strong>.
+                            </p>
+                            <div class="alert-info-note">
+                                <svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg> <em>Important Privacy Distinction:</em> This ensures restricted institutional handling; it does not constitute untraceable anonymous reporting because your college email was verified at login to enable procedural safeguards and official protective measures.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mandatory Accuracy Declaration -->
+                <div class="declaration-card">
+                    <div style="display: flex; gap: 12px; align-items: flex-start;">
+                        <input 
+                            type="checkbox" 
+                            id="declaration-check" 
+                            name="accuracy_declaration" 
+                            value="true" 
+                            required 
+                            style="margin-top: 4px; width: 18px; height: 18px; cursor: pointer;"
+                        >
+                        <label for="declaration-check" style="font-size: 13px; color: var(--text); line-height: 1.5; cursor: pointer;">
+                            <strong>Truthfulness Declaration <span class="req-star">*</span>:</strong>
+                            I solemnly declare that the facts stated in this incident report are true and correct to the best of my knowledge and recollection. I understand that submitting this report initiates formal Anti-Ragging Committee review under institutional and statutory UGC regulations.
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Emergency Contact Bar -->
+                <div class="emergency-help-strip">
+                    <span><svg class="svg-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Immediate Danger?</span>
+                    <span>Call National Anti-Ragging 24x7 Toll-Free Helpline: <strong>1800-180-5522</strong> | Police: <strong>112</strong></span>
                 </div>
 
                 <!-- Submit Button -->
                 <div style="margin-top: 30px;">
-                    <button type="submit" class="btn-primary" style="width: 100%; padding: 14px;">Submit Complaint to AI Router</button>
+                    <button type="submit" class="btn-primary" style="width: 100%; padding: 15px; font-size: 16px; font-weight: 700; letter-spacing: 0.3px;">
+                        <svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>Submit Incident Report to Anti-Ragging Committee
+                    </button>
                 </div>
 
             </form>
@@ -106,20 +266,45 @@
 
     <!-- Footer -->
     <footer class="dashboard-footer">
-        Powered by <b>EduSort AI</b> | Vel Tech High Tech Engineering College | © 2026
+        Powered by <b>College Anti-Ragging Cell</b> | Statutory UGC Anti-Ragging Monitoring System | © 2026
     </footer>
 
     <!-- Load scripts -->
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
     <script>
-        // Combine location and description on submit to feed keywords to ML model
+        // Client-side validation to ensure required fields and declaration are satisfied
         document.getElementById('complaint-form').addEventListener('submit', function(e) {
-            const locationSelect = document.getElementById('location-select').value;
-            const complaintInput = document.getElementById('complaint-text-input');
-            
-            // If location is specific, prepend it to complaint text to enrich classifier features
-            if (locationSelect !== 'General') {
-                complaintInput.value = locationSelect + " - " + complaintInput.value;
+            const declaration = document.getElementById('declaration-check');
+            const category = document.getElementById('category-select');
+            const desc = document.getElementById('complaint-text-input');
+            const title = document.getElementById('title-input');
+
+            if (!category.value) {
+                alert('Please select an Incident Category before submitting.');
+                category.focus();
+                e.preventDefault();
+                return false;
+            }
+
+            if (!title.value.trim()) {
+                alert('Please provide an incident headline/subject.');
+                title.focus();
+                e.preventDefault();
+                return false;
+            }
+
+            if (!desc.value.trim()) {
+                alert('Please provide a detailed description of the incident.');
+                desc.focus();
+                e.preventDefault();
+                return false;
+            }
+
+            if (!declaration.checked) {
+                alert('You must confirm the Truthfulness Declaration before submitting.');
+                declaration.focus();
+                e.preventDefault();
+                return false;
             }
         });
     </script>

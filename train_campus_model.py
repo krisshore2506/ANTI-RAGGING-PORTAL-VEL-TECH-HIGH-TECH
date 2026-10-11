@@ -27,4 +27,4 @@ model.fit(X_train, y_train)
 pickle.dump(model, open("campus_model.pkl","wb"))
 pickle.dump(vectorizer, open("campus_vectorizer.pkl","wb"))
 
-print("Campus Model Trained Successfully ✅")
+print("Campus Model Trained Successfully [SUCCESS]")

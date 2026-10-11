@@ -16,7 +16,7 @@
 .admin-navbar {
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   color: #ffffff;
-  padding: 15px 5%;
+  padding: 12px 5%;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -25,28 +25,27 @@
 }
 
 .admin-brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   text-decoration: none;
   color: #ffffff;
 }
 
 .admin-brand img {
-  height: 40px;
-  width: auto;
-  border-radius: var(--radius-sm);
-  background: #ffffff;
-  padding: 2px;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .admin-brand-title {
   display: flex;
   flex-direction: column;
+  justify-content: center;
 }
 
 .admin-brand-title h1 {
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 700;
   letter-spacing: -0.5px;
   margin: 0;
@@ -376,4 +375,21 @@
   text-align: center;
   font-size: 13px;
   color: var(--text-muted);
+}
+
+
+/* Anti-Ragging Additions */
+.admin-stat-card.action-taken {
+  border-bottom-color: #8b5cf6;
+}
+
+.prio-badge.prio-critical {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+  font-weight: 700;
+}
+
+.confidential-alert {
+  box-shadow: 0 1px 3px rgba(225, 29, 72, 0.1);
 }

@@ -27,4 +27,4 @@ model.fit(X_train, y_train)
 pickle.dump(model, open("hostel_model.pkl", "wb"))
 pickle.dump(vectorizer, open("hostel_vectorizer.pkl", "wb"))
 
-print("Hostel Model Trained Successfully ✅")
+print("Hostel Model Trained Successfully [SUCCESS]")

@@ -14,22 +14,21 @@ document.addEventListener('DOMContentLoaded', function() {
             if (text.length > 5) {
                 previewBox.style.display = 'block';
                 
-                // Simulate category check on keywords to update preview card
-                const cleaningKeywords = ["dirty", "dust", "garbage", "smell", "toilet", "washroom", "bathroom", "clean", "waste", "mop", "sweep", "lab", "room"];
-                const hostelKeywords = ["hostel", "room", "bed", "warden", "mess", "block"];
+                // Anti-ragging triage suggestion preview (triage aid only)
+                const criticalWords = ["hospital", "bleeding", "weapon", "knife", "suicide", "locked in", "unconscious", "emergency"];
+                const highWords = ["beat", "slap", "punch", "extort", "money", "blackmail", "forced to", "threatened"];
                 
-                let isCleaning = cleaningKeywords.some(word => text.toLowerCase().includes(word));
-                let isHostel = hostelKeywords.some(word => text.toLowerCase().includes(word));
+                let isCrit = criticalWords.some(w => text.toLowerCase().includes(w));
+                let isHigh = highWords.some(w => text.toLowerCase().includes(w));
                 
-                if (isCleaning) {
-                    if (isHostel) {
-                        previewCategory.textContent = "Hostel - Cleaning (Auto-Assigned)";
-                    } else {
-                        previewCategory.textContent = "Campus - Cleaning (Auto-Assigned)";
-                    }
+                if (isCrit) {
+                    previewCategory.textContent = "Provisional Triage: Critical Priority (Immediate Committee Review)";
+                    previewCategory.className = "badge badge-escalated";
+                } else if (isHigh) {
+                    previewCategory.textContent = "Provisional Triage: High Priority (Expedited ARC Review)";
                     previewCategory.className = "badge badge-assigned";
                 } else {
-                    previewCategory.textContent = "Academic / General Complaint (AI Routed)";
+                    previewCategory.textContent = "Provisional Triage: Standard Priority (Confidential ARC Queue)";
                     previewCategory.className = "badge badge-open";
                 }
             } else {
