@@ -128,6 +128,7 @@
                                         <td>{{ call.phone_number }}</td>
                                         <td>
                                             <form method="POST" action="{{ url_for('update_call_status') }}" style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                                 <input type="hidden" name="call_id" value="{{ call.id }}">
                                                 
                                                 <select name="call_status" class="filter-select" style="padding: 4px 8px; font-size: 12px;">

@@ -36,6 +36,7 @@
         {% endwith %}
 
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="form-group">
                 <label for="email-input" style="color: #cbd5e1;">Admin Email Address</label>
                 <input

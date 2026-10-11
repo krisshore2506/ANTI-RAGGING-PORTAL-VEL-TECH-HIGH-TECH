@@ -44,6 +44,7 @@
         {% endwith %}
 
         <form method="POST" action="/verify_otp">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="form-group">
                 <label for="otp-input" style="text-align: center; display: block; font-weight: 600; margin-bottom: 10px;">
                     Enter 6-Digit OTP

@@ -12,11 +12,19 @@ import hashlib
 import time
 import os
 import sqlite3
+import logging
 
 from twilio.rest import Client
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# ================= SECURE LOGGING CONFIG =================
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+logger = logging.getLogger("anti_ragging_portal")
 
 # ================= TWILIO CONFIG =================
 account_sid = os.getenv("TWILIO_ACCOUNT_SID")
@@ -25,10 +33,14 @@ twilio_number = os.getenv("TWILIO_PHONE_NUMBER")
 
 client = None
 if account_sid and auth_token:
-    client = Client(account_sid, auth_token)
-    print("Twilio configured successfully.")
+    try:
+        client = Client(account_sid, auth_token)
+        logger.info("Twilio configured successfully.")
+    except Exception as twilio_err:
+        logger.warning("Twilio initialization error: %s. Continuing in simulated mode.", twilio_err)
+        client = None
 else:
-    print("Twilio not configured. SMS/call features will run in simulated mode.")
+    logger.info("Twilio not configured. SMS/call features will run in simulated mode.")
 
 
 # ================= TOKEN SECURITY & RATE LIMITING =================
@@ -90,10 +102,44 @@ def reset_tracking_attempts():
     session.pop("track_lockout_until", None)
 
 
-# ================= ANTI-RAGGING CLASSIFIER & TRIAGE LOGIC =================
-# Legacy education and sanitation models (*.pkl) remain preserved on disk
-# but are decoupled from the Anti-Ragging Portal.
+# ================= ADMINISTRATOR AUTH RATE LIMITING =================
+MAX_ADMIN_ATTEMPTS = 5
+ADMIN_LOCKOUT_SECONDS = 900  # 15 minutes
+admin_failed_attempts = {}
 
+def check_admin_rate_limit(client_ip: str):
+    """
+    Throttles administrator login attempts to mitigate password brute-forcing.
+    """
+    now = time.time()
+    record = admin_failed_attempts.get(client_ip)
+    if record:
+        lockout_until = record.get("lockout_until", 0)
+        if now < lockout_until:
+            remaining_mins = max(1, int(lockout_until - now) // 60 + 1)
+            return False, f"Too many failed administrator login attempts. Account temporarily locked for {remaining_mins} minute(s)."
+    return True, None
+
+def record_admin_login_failure(client_ip: str):
+    """
+    Records failed administrator attempt and enforces lockout if threshold met.
+    """
+    now = time.time()
+    record = admin_failed_attempts.get(client_ip, {"count": 0, "lockout_until": 0})
+    record["count"] += 1
+    if record["count"] >= MAX_ADMIN_ATTEMPTS:
+        record["lockout_until"] = now + ADMIN_LOCKOUT_SECONDS
+        record["count"] = 0
+    admin_failed_attempts[client_ip] = record
+
+def reset_admin_login_failures(client_ip: str):
+    """
+    Clears failed administrator login counter upon successful authentication.
+    """
+    admin_failed_attempts.pop(client_ip, None)
+
+
+# ================= ANTI-RAGGING CLASSIFIER & TRIAGE LOGIC =================
 VALID_INCIDENT_CATEGORIES = [
     "Verbal or emotional harassment",
     "Physical ragging",
@@ -184,22 +230,104 @@ def suggest_provisional_severity(category, text="", student_priority="Medium"):
     return "Medium" 
 
 
-# ================= APP CONFIG =================
+# ================= APP CONFIG & SESSION SECURITY =================
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
 
+# Mandatory Requirement A: Stable SECRET_KEY loaded from environment configuration
+# Fail safely with a clear startup error when required production secrets are missing.
+SECRET_KEY = os.getenv("SECRET_KEY")
+FLASK_ENV = os.getenv("FLASK_ENV", "development").lower()
+IS_PRODUCTION = FLASK_ENV == "production" or os.getenv("ENV", "").lower() == "production"
+
+if not SECRET_KEY:
+    raise RuntimeError(
+        "CRITICAL SECURITY CONFIGURATION ERROR: SECRET_KEY environment variable is required but missing. "
+        "Define a persistent, secure SECRET_KEY in your environment or .env file before running."
+    )
+
+app.secret_key = SECRET_KEY
+
+# Mandatory Requirement A: Server-side sessions and secure cookie attributes
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_USE_SIGNER"] = True
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = os.getenv("SESSION_COOKIE_SECURE", "False").lower() in ("true", "1")
 Session(app)
+
 
 # ================= DATABASE CONFIG =================
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DB_NAME = "anti_ragging_dev.db"
 DB_PATH = os.path.join(BASE_DIR, DB_NAME)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + DB_PATH
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+env_db_url = os.getenv("DATABASE_URL", "").strip()
+if env_db_url and env_db_url.lower() not in ("your_db_url", "none", ""):
+    if env_db_url.startswith("postgres://"):
+        env_db_url = env_db_url.replace("postgres://", "postgresql://", 1)
+    app.config["SQLALCHEMY_DATABASE_URI"] = env_db_url
+else:
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + DB_PATH
+
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
+
+
+# ================= NATIVE CSRF PROTECTION =================
+def get_or_create_csrf_token():
+    """
+    Generates and returns a cryptographically secure session CSRF token.
+    """
+    if "csrf_token" not in session:
+        session["csrf_token"] = secrets.token_hex(32)
+    return session["csrf_token"]
+
+@app.context_processor
+def inject_csrf_token():
+    """
+    Makes the CSRF token accessible to all Jinja2 templates via `csrf_token`.
+    """
+    return {"csrf_token": get_or_create_csrf_token()}
+
+@app.before_request
+def validate_csrf():
+    """
+    Validates CSRF tokens on all state-changing HTTP requests.
+    Supports form fields ('csrf_token') and HTTP headers ('X-CSRFToken', 'X-CSRF-Token').
+    Can be bypassed during automated test suites when CSRF_ENABLED is False.
+    """
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return None
+
+    # Exempt automated testing when explicitly disabled
+    if app.config.get("TESTING") and not app.config.get("CSRF_ENABLED", True):
+        return None
+
+    submitted_token = (
+        request.form.get("csrf_token")
+        or request.headers.get("X-CSRFToken")
+        or request.headers.get("X-CSRF-Token")
+    )
+    stored_token = session.get("csrf_token")
+
+    if not submitted_token or not stored_token or not secrets.compare_digest(str(submitted_token), str(stored_token)):
+        logger.warning(
+            "CSRF validation failed for route '%s' from client IP '%s'.",
+            request.path,
+            request.remote_addr or "unknown"
+        )
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("format") == "json":
+            return jsonify({"error": "CSRF validation failed. Please refresh and try again."}), 403
+
+        flash("Your security verification token has expired or is invalid. Please try again.", "error")
+        return render_template(
+            "error.html",
+            error_title="Security Verification Failed",
+            error_heading="CSRF Validation Error",
+            error_message="Your security verification token was invalid or has expired. Please return to the portal and try again."
+        ), 403
+
 
 # ================= DATABASE MODELS =================
 class Complaint(db.Model):
@@ -216,7 +344,7 @@ class Complaint(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Anti-Ragging Specific Attributes (Prototype)
+    # Anti-Ragging Specific Attributes
     incident_type = db.Column(db.String(100), nullable=True)
     severity_level = db.Column(db.String(50), nullable=True, default="Medium")
     incident_date_time = db.Column(db.String(100), nullable=True)
@@ -285,27 +413,25 @@ def send_sms_simulated(complaint_id, to_number, message):
 
 
 def send_otp_email(email, otp):
+    """
+    Sends OTP email to the student. Does not log passwords or confidential data.
+    """
     if not SMTP_EMAIL or not SMTP_PASSWORD:
-        raise ValueError("SMTP_EMAIL or SMTP_PASSWORD is missing")
+        raise ValueError("SMTP_EMAIL or SMTP_PASSWORD is not configured.")
 
-    msg = MIMEText(f"Your OTP is {otp}. It expires in 1 minute.", "plain")
+    msg = MIMEText(f"Your Anti-Ragging Portal verification OTP is {otp}. This code is valid for 60 seconds.", "plain")
     msg["Subject"] = "Anti-Ragging Portal OTP Verification"
     msg["From"] = SMTP_EMAIL
     msg["To"] = email
 
-    try:
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=20) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(SMTP_EMAIL, SMTP_PASSWORD)
-            server.send_message(msg)
+    with smtplib.SMTP("smtp.gmail.com", 587, timeout=20) as server:
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+        server.login(SMTP_EMAIL, SMTP_PASSWORD)
+        server.send_message(msg)
 
-        print(f"OTP email sent successfully to {email}")
-
-    except Exception as e:
-        print("OTP Email Error:", e)
-        raise
+    logger.info("OTP verification email successfully dispatched to student.")
 
 
 def find_cleaner(main_dept, sub_dept):
@@ -317,7 +443,7 @@ def find_cleaner(main_dept, sub_dept):
 
 def send_sms(to_number, message):
     if not client:
-        print("Twilio not configured. Skipping real SMS.")
+        logger.info("Twilio not configured. Skipping real SMS.")
         return False
 
     try:
@@ -328,13 +454,11 @@ def send_sms(to_number, message):
         )
         return True
     except Exception as e:
-        print("SMS Error:", e)
+        logger.error("SMS dispatch error: %s", str(e))
         return False
 
 
 def trigger_auto_call(complaint_id, cleaner_name, phone_number):
-    print(f"[CALL] Auto Call Triggered → Complaint #{complaint_id} → {phone_number}")
-
     call_log = CallLog(
         complaint_id=complaint_id,
         cleaner_name=cleaner_name,
@@ -404,7 +528,7 @@ def send_status_update_email(student_email, complaint_id, new_status):
 
             <div style="background:#f1f5f9; padding:14px; text-align:center;
                         font-size:12px; color:#555;">
-                © 2026 Anti-Ragging Portal | Vel Tech High Tech Engineering College
+                &copy; 2026 Anti-Ragging Portal | Vel Tech High Tech Engineering College
             </div>
         </div>
     </body>
@@ -425,10 +549,10 @@ def send_status_update_email(student_email, complaint_id, new_status):
             server.login(SMTP_EMAIL, SMTP_PASSWORD)
             server.send_message(msg)
 
-        print(f"Status update email sent to {student_email}")
+        logger.info("Status update email successfully sent for incident #%s", complaint_id)
 
     except Exception as e:
-        print("Status email error:", e)
+        logger.error("Failed to send status email for incident #%s: %s", complaint_id, str(e))
 
 
 # ================= ROUTES =================
@@ -445,21 +569,40 @@ def student_login():
 # ================= SEND OTP =================
 @app.route("/send_otp", methods=["POST"])
 def send_otp():
-    email = request.form["email"].strip()
+    # Mandatory Requirement B: Normalize email address before college-domain validation
+    raw_email = request.form.get("email", "")
+    email = raw_email.strip().lower()
 
-    if not email.endswith("@velhightech.com"):
-        return render_template("error.html")
+    if not email or "@" not in email or not email.endswith("@velhightech.com"):
+        return render_template(
+            "error.html",
+            error_title="Access Restricted",
+            error_heading="Invalid Email Domain",
+            error_message="The Anti-Ragging Portal is restricted exclusively to valid @velhightech.com college student email accounts."
+        )
+
+    # Mandatory Requirement B: Prevent trivial resend abuse (30s cooldown between new OTP generations)
+    now = time.time()
+    last_otp_time = session.get("otp_time", 0)
+    if now - last_otp_time < 30 and session.get("email") == email:
+        wait_sec = int(30 - (now - last_otp_time)) + 1
+        flash(f"A verification code was recently generated. Please wait {wait_sec} second(s) before requesting again.", "error")
+        return redirect(url_for("verify_otp_page"))
 
     otp = str(random.randint(100000, 999999))
     session["otp"] = otp
     session["email"] = email
-    session["otp_time"] = time.time()
+    session["otp_time"] = now
+    session["otp_resend_count"] = 0
 
     try:
         send_otp_email(email, otp)
         return redirect(url_for("verify_otp_page"))
     except Exception as e:
-        return f"OTP Error: {e}"
+        # Mandatory Requirement D: Safe user-facing error message without raw traceback exposure
+        logger.error("Failed to deliver OTP email: %s", str(e))
+        flash("Unable to send verification code. Please check server connectivity or try again shortly.", "error")
+        return render_template("student_login.html")
 
 
 # ================= OTP PAGE (GET) =================
@@ -471,15 +614,33 @@ def verify_otp_page():
 # ================= VERIFY OTP (POST) =================
 @app.route("/verify_otp", methods=["POST"])
 def verify_otp():
-    user_otp = request.form.get("otp")
+    user_otp = request.form.get("otp", "").strip()
     stored_otp = session.get("otp")
     email = session.get("email")
+    otp_time = session.get("otp_time", 0)
 
-    if user_otp == stored_otp:
+    if not stored_otp or not otp_time:
+        flash("No active verification code found. Please request a new code.", "error")
+        return render_template("verify_otp.html", email=email)
+
+    now = time.time()
+    # Mandatory Requirement B: Enforce stated 60-second OTP expiry
+    if now - otp_time > 60:
+        session.pop("otp", None)
+        session.pop("otp_time", None)
+        flash("Verification code has expired (valid for 60 seconds). Please request a new code.", "error")
+        return render_template("verify_otp.html", email=email)
+
+    # Mandatory Requirement B: Single-use invalidation and constant-time comparison
+    if secrets.compare_digest(str(user_otp), str(stored_otp)):
+        session.pop("otp", None)
+        session.pop("otp_time", None)
+        session.pop("otp_resend_count", None)
         session["verified"] = True
+        logger.info("Student authenticated successfully via OTP.")
         return redirect(url_for("student_dashboard"))
 
-    flash("Invalid OTP. Please try again.", "error")
+    flash("Invalid verification code. Please try again.", "error")
     return render_template("verify_otp.html", email=email)
 
 
@@ -489,26 +650,45 @@ def resend_otp():
     email = session.get("email")
 
     if not email:
-        flash("Session expired. Please login again.", "error")
+        flash("Session expired. Please enter your email again.", "error")
+        return redirect(url_for("student_login"))
+
+    now = time.time()
+    last_otp_time = session.get("otp_time", 0)
+    resend_count = session.get("otp_resend_count", 0)
+
+    # Mandatory Requirement B: Review OTP resend behavior and prevent trivial resend abuse
+    if now - last_otp_time < 30:
+        wait_sec = int(30 - (now - last_otp_time)) + 1
+        flash(f"Please wait {wait_sec} second(s) before requesting another verification code.", "error")
+        return redirect(url_for("verify_otp_page"))
+
+    if resend_count >= 5:
+        flash("Maximum resend attempts reached. Please return to login and try again later.", "error")
         return redirect(url_for("student_login"))
 
     new_otp = str(random.randint(100000, 999999))
     session["otp"] = new_otp
-    session["otp_time"] = time.time()
+    session["otp_time"] = now
+    session["otp_resend_count"] = resend_count + 1
 
     try:
         send_otp_email(email, new_otp)
-        flash("A new OTP has been sent to your email.", "success")
+        flash("A new verification code has been sent to your email (valid for 60 seconds).", "success")
     except Exception as e:
-        flash(f"Failed to resend OTP: {e}", "error")
+        # Mandatory Requirement D: Safe user-facing error message
+        logger.error("Failed to resend OTP email: %s", str(e))
+        flash("Unable to resend verification code. Please try again shortly.", "error")
 
     return redirect(url_for("verify_otp_page"))
 
 
+# ================= STUDENT DASHBOARD =================
 @app.route("/student_dashboard")
 def student_dashboard():
-    if not session.get("verified"):
-        return redirect(url_for("home"))
+    # Mandatory Requirement C: Check authentication and student ownership
+    if not session.get("verified") or not session.get("email"):
+        return redirect(url_for("student_login"))
 
     email = session.get("email")
     complaints = Complaint.query.filter_by(student_email=email).order_by(Complaint.timestamp.desc()).all()
@@ -532,6 +712,7 @@ def student_dashboard():
 # ================= STUDENT LOGOUT =================
 @app.route("/student_logout")
 def student_logout():
+    # Mandatory Requirement A: Invalidate student session
     session.clear()
     return redirect(url_for("home"))
 
@@ -539,16 +720,18 @@ def student_logout():
 # ================= COMPLAINT FORM =================
 @app.route("/complaint_form")
 def complaint_form():
-    if not session.get("verified"):
-        return redirect(url_for("home"))
+    # Mandatory Requirement C: Check authentication
+    if not session.get("verified") or not session.get("email"):
+        return redirect(url_for("student_login"))
     return render_template("complaint_form.html", email=session.get("email"))
 
 
-# ================= PREDICT =================
+# ================= PREDICT / SUBMIT COMPLAINT =================
 @app.route("/predict", methods=["POST"])
 def predict():
-    if not session.get("verified"):
-        return redirect(url_for("home"))
+    # Mandatory Requirement C: Check authentication
+    if not session.get("verified") or not session.get("email"):
+        return redirect(url_for("student_login"))
 
     # Required form inputs
     complaint_text = request.form.get("complaint", "").strip()
@@ -626,8 +809,7 @@ def predict():
     db.session.add(complaint)
     db.session.commit()
 
-    # NOTE: Sanitation phone call and SMS dispatches have been completely removed.
-    # No real calls or SMS messages are sent. Tracking tokens are not logged in plain app logs.
+    logger.info("New incident #%s submitted successfully by student.", complaint.id)
 
     return render_template(
         "success.html",
@@ -648,10 +830,29 @@ def predict():
 @app.route("/admin_login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
-        if request.form["email"] == ADMIN_EMAIL and request.form["password"] == ADMIN_PASSWORD:
+        client_ip = request.remote_addr or "127.0.0.1"
+
+        # Mandatory Requirement C: Rate limiting on administrator login
+        allowed, lockout_msg = check_admin_rate_limit(client_ip)
+        if not allowed:
+            flash(lockout_msg, "error")
+            return render_template("admin_login.html")
+
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
+
+        # Mandatory Requirement C: Constant-time comparison
+        valid_email = ADMIN_EMAIL and secrets.compare_digest(email.lower(), ADMIN_EMAIL.lower())
+        valid_password = ADMIN_PASSWORD and secrets.compare_digest(password, ADMIN_PASSWORD)
+
+        if valid_email and valid_password:
+            reset_admin_login_failures(client_ip)
             session["admin_logged_in"] = True
+            logger.info("Administrator successfully authenticated from IP %s", client_ip)
             return redirect(url_for("admin"))
 
+        record_admin_login_failure(client_ip)
+        logger.warning("Failed administrator login attempt from IP %s", client_ip)
         flash("Invalid admin credentials", "error")
 
     return render_template("admin_login.html")
@@ -660,6 +861,7 @@ def admin_login():
 # ================= ANTI-RAGGING COMMITTEE (ARC) DASHBOARD =================
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
+    # Mandatory Requirement C: Check administrator authorization
     if not session.get("admin_logged_in"):
         return redirect(url_for("admin_login"))
 
@@ -729,6 +931,7 @@ def admin():
 # ================= AUTHORIZED COMMITTEE COMPLAINT DETAILS =================
 @app.route("/admin/complaint/<int:complaint_id>", methods=["GET", "POST"])
 def admin_complaint_details(complaint_id):
+    # Mandatory Requirement C: Check administrator authorization
     if not session.get("admin_logged_in"):
         return redirect(url_for("admin_login"))
 
@@ -776,6 +979,7 @@ def admin_complaint_details(complaint_id):
 # ================= ADMIN LOGS =================
 @app.route("/admin/logs")
 def admin_logs():
+    # Mandatory Requirement C: Check administrator authorization
     if not session.get("admin_logged_in"):
         return redirect(url_for("admin_login"))
 
@@ -827,6 +1031,7 @@ def admin_logs():
 
 @app.route("/update_call_status", methods=["POST"])
 def update_call_status():
+    # Mandatory Requirement C: Check administrator authorization
     if not session.get("admin_logged_in"):
         return redirect(url_for("admin_login"))
 
@@ -843,6 +1048,7 @@ def update_call_status():
 
 @app.route("/admin_logout")
 def admin_logout():
+    # Mandatory Requirement A: Invalidate administrator session
     session.pop("admin_logged_in", None)
     return redirect(url_for("admin_login"))
 
@@ -969,9 +1175,9 @@ with app.app_context():
 
         conn.commit()
         conn.close()
-        print(f"Database schema initialized/verified for {DB_NAME}.")
+        logger.info("Database schema initialized/verified for %s.", DB_NAME)
     except Exception as e:
-        print("Database schema migration error:", e)
+        logger.error("Database schema migration error: %s", str(e))
 
 
 if __name__ == "__main__":

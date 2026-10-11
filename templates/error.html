@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Restriction Error - Anti-Ragging Portal</title>
+    <title>{{ error_title or 'Security Notice' }} - Anti-Ragging Portal</title>
     
     <!-- Link styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -17,17 +17,21 @@
             <div class="college-logo-container college-logo-container-lg">
             <img src="{{ url_for('static', filename='images/veltech_college_logo.png') }}" alt="Vel Tech High Tech College Logo" class="college-logo">
         </div>
-            <h2 style="color: var(--status-escalated);">Access Restricted</h2>
+            <h2 style="color: var(--status-escalated);">{{ error_title or 'Access Restricted' }}</h2>
             <p>Vel Tech Security Firewall</p>
         </div>
 
         <div class="alert alert-error" style="margin-bottom: 25px;">
-            <span><svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>Invalid Email Domain</span>
+            <span><svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>{{ error_heading or 'Invalid Email Domain' }}</span>
         </div>
 
         <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 30px;">
-            Sorry, you do not have permission to access the Anti-Ragging Portal. 
-            The Anti-Ragging Portal is restricted exclusively to valid <strong>@velhightech.com</strong> college student email accounts.
+            {% if error_message %}
+                {{ error_message }}
+            {% else %}
+                Sorry, you do not have permission to access the Anti-Ragging Portal. 
+                The Anti-Ragging Portal is restricted exclusively to valid <strong>@velhightech.com</strong> college student email accounts.
+            {% endif %}
         </p>
 
         <a href="/student_login" class="btn-primary" style="width: 100%; text-decoration: none;">Try Login Again</a>

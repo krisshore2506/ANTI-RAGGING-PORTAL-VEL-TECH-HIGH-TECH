@@ -155,6 +155,7 @@
                         </h3>
 
                         <form method="POST" action="{{ url_for('admin_complaint_details', complaint_id=complaint.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                             <div class="form-group" style="margin-bottom: 15px;">
                                 <label for="detail-status" style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 5px;">
                                     Case Status
