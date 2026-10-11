@@ -13,6 +13,7 @@ import time
 import os
 import sqlite3
 import logging
+import html
 
 from twilio.rest import Client
 from dotenv import load_dotenv
@@ -414,15 +415,125 @@ def send_sms_simulated(complaint_id, to_number, message):
 
 def send_otp_email(email, otp):
     """
-    Sends OTP email to the student. Does not log passwords or confidential data.
+    Sends a responsive, professional HTML and plain-text verification OTP email to the student.
+    Matches the portal's brand palette (navy/blue) with clean typography and high contrast.
+    Does not log passwords or confidential data.
     """
     if not SMTP_EMAIL or not SMTP_PASSWORD:
         raise ValueError("SMTP_EMAIL or SMTP_PASSWORD is not configured.")
 
-    msg = MIMEText(f"Your Anti-Ragging Portal verification OTP is {otp}. This code is valid for 60 seconds.", "plain")
-    msg["Subject"] = "Anti-Ragging Portal OTP Verification"
+    safe_otp = html.escape(str(otp).strip())
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Anti-Ragging Portal | Email Verification"
     msg["From"] = SMTP_EMAIL
     msg["To"] = email
+
+    # Plain text version for minimal/text-only email clients
+    plain_text = (
+        "ANTI-RAGGING PORTAL\n"
+        "Vel Tech High Tech Dr. Rangarajan Dr. Sakunthala Engineering College\n\n"
+        "VERIFY YOUR EMAIL ADDRESS\n\n"
+        "Use the verification code below to verify your official college email address "
+        "and securely access the Anti-Ragging Portal.\n\n"
+        f"Verification Code: {safe_otp}\n\n"
+        "This code expires in 1 minute.\n\n"
+        "SECURITY NOTICE:\n"
+        "Do not share this code with anyone. Committee officers will never ask for your "
+        "verification code. If you did not request this verification code, please ignore this email.\n\n"
+        "--------------------------------------------------\n"
+        "Student Safety | Confidentiality | Secure Access\n"
+        "Official Anti-Ragging Monitoring System\n"
+    )
+
+    # Polished, responsive HTML version matching website design tokens
+    html_body = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your Email Address</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #0f172a;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f1f5f9; padding: 30px 12px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 580px; background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06); overflow: hidden;">
+                    <!-- Brand Header -->
+                    <tr>
+                        <td style="background-color: #1e3a8a; padding: 26px 24px; text-align: center; border-bottom: 3px solid #3b82f6;">
+                            <div style="color: #bfdbfe; font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 5px;">
+                                Vel Tech High Tech Dr. Rangarajan Dr. Sakunthala Engineering College
+                            </div>
+                            <h1 style="color: #ffffff; margin: 0; font-size: 21px; font-weight: 700; letter-spacing: 0.5px;">
+                                ANTI RAGGING PORTAL
+                            </h1>
+                        </td>
+                    </tr>
+
+                    <!-- Main Content Body -->
+                    <tr>
+                        <td style="padding: 34px 28px 28px 28px;">
+                            <h2 style="margin: 0 0 12px 0; color: #0f172a; font-size: 20px; font-weight: 700; line-height: 1.3;">
+                                Verify Your Email Address
+                            </h2>
+                            <p style="margin: 0 0 22px 0; color: #334155; font-size: 14.5px; line-height: 1.6;">
+                                Use the verification code below to verify your official college email address and securely access the Anti-Ragging Portal.
+                            </p>
+
+                            <!-- High-Contrast OTP Card -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 24px 0;">
+                                <tr>
+                                    <td align="center" style="background-color: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 22px 16px; text-align: center;">
+                                        <span style="display: block; color: #64748b; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
+                                            One-Time Verification Code
+                                        </span>
+                                        <div style="font-family: 'SF Pro Text', -apple-system, Consolas, Monaco, monospace; font-size: 34px; font-weight: 700; letter-spacing: 8px; color: #1e3a8a; line-height: 1; padding: 6px 0;">
+                                            {safe_otp}
+                                        </div>
+                                        <div style="margin-top: 10px;">
+                                            <span style="display: inline-block; background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 12.5px; font-weight: 600; padding: 4px 12px; border-radius: 4px;">
+                                                This code expires in 1 minute.
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Security Advisory Callout -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 20px;">
+                                <tr>
+                                    <td style="background-color: #f8fafc; border-left: 4px solid #3b82f6; border-radius: 0 6px 6px 0; padding: 12px 16px;">
+                                        <p style="margin: 0; color: #475569; font-size: 12.5px; line-height: 1.5;">
+                                            <strong style="color: #1e3a8a;">Security Notice:</strong> Do not share this one-time code with anyone. Committee officers will never ask for your verification code. If you did not request this verification code, please ignore this email.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 24px; text-align: center;">
+                            <p style="margin: 0 0 6px 0; color: #1e40af; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">
+                                Student Safety | Confidentiality | Secure Access
+                            </p>
+                            <p style="margin: 0; color: #94a3b8; font-size: 11px; line-height: 1.4;">
+                                Vel Tech High Tech Dr. Rangarajan Dr. Sakunthala Engineering College<br>
+                                Official Anti-Ragging Committee Monitoring System
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>"""
+
+    msg.attach(MIMEText(plain_text, "plain", "utf-8"))
+    msg.attach(MIMEText(html_body, "html", "utf-8"))
 
     with smtplib.SMTP("smtp.gmail.com", 587, timeout=20) as server:
         server.ehlo()

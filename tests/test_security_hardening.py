@@ -358,5 +358,78 @@ class TestSafeSMTPErrorHandling(BaseSecurityTestCase):
         self.assertIn(b"Unable to send verification code", resp.data)
 
 
+class TestOTPEmailContentAndDelivery(BaseSecurityTestCase):
+    @patch("smtplib.SMTP")
+    def test_otp_email_multipart_alternative_and_content(self, mock_smtp_class):
+        """Verify OTP email contains both text/plain and text/html with required elements."""
+        mock_server = MagicMock()
+        mock_smtp_class.return_value.__enter__.return_value = mock_server
+
+        test_email = "student@velhightech.com"
+        test_otp = "739201"
+
+        grievai_app.send_otp_email(test_email, test_otp)
+
+        self.assertTrue(mock_server.send_message.called)
+        sent_msg = mock_server.send_message.call_args[0][0]
+
+        # 1. Subject verification
+        self.assertEqual(sent_msg["Subject"], "Anti-Ragging Portal | Email Verification")
+        self.assertEqual(sent_msg["To"], test_email)
+
+        # 2. Multipart/alternative check
+        self.assertTrue(sent_msg.is_multipart())
+        self.assertEqual(sent_msg.get_content_type(), "multipart/alternative")
+        parts = sent_msg.get_payload()
+        self.assertEqual(len(parts), 2)
+        self.assertEqual(parts[0].get_content_type(), "text/plain")
+        self.assertEqual(parts[1].get_content_type(), "text/html")
+
+        plain_content = parts[0].get_payload(decode=True).decode("utf-8")
+        html_content = parts[1].get_payload(decode=True).decode("utf-8")
+
+        # 3. Dynamic OTP in both plain text and HTML
+        self.assertIn("739201", plain_content)
+        self.assertIn("739201", html_content)
+
+        # 4. Expiry notice verification
+        self.assertIn("This code expires in 1 minute.", plain_content)
+        self.assertIn("This code expires in 1 minute.", html_content)
+
+        # 5. Header and Heading verification
+        self.assertIn("ANTI RAGGING PORTAL", html_content)
+        self.assertIn("Verify Your Email Address", html_content)
+        self.assertIn("ANTI-RAGGING PORTAL", plain_content)
+        self.assertIn("VERIFY YOUR EMAIL ADDRESS", plain_content)
+
+        # 6. Security notice verification
+        self.assertIn("Do not share this", plain_content)
+        self.assertIn("Security Notice:", html_content)
+        self.assertIn("Do not share this", html_content)
+
+        # 7. Footer verification
+        self.assertIn("Student Safety | Confidentiality | Secure Access", plain_content)
+        self.assertIn("Student Safety | Confidentiality | Secure Access", html_content)
+
+        # 8. HTML structure check
+        self.assertTrue(html_content.strip().startswith("<!DOCTYPE html>"))
+        self.assertIn("</html>", html_content)
+
+    @patch("smtplib.SMTP")
+    def test_otp_email_dynamic_html_escaping(self, mock_smtp_class):
+        """Verify dynamic values in OTP email are properly escaped."""
+        mock_server = MagicMock()
+        mock_smtp_class.return_value.__enter__.return_value = mock_server
+
+        dangerous_otp = "<987654>&"
+        grievai_app.send_otp_email("student@velhightech.com", dangerous_otp)
+
+        sent_msg = mock_server.send_message.call_args[0][0]
+        html_content = sent_msg.get_payload()[1].get_payload(decode=True).decode("utf-8")
+
+        self.assertNotIn("<987654>&", html_content)
+        self.assertIn("&lt;987654&gt;&amp;", html_content)
+
+
 if __name__ == "__main__":
     unittest.main()
