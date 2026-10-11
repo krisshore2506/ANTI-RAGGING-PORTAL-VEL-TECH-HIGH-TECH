@@ -6,7 +6,6 @@ from email.mime.text import MIMEText
 from datetime import datetime
 import pickle
 import smtplib
-import random
 import secrets
 import hashlib
 import time
@@ -44,9 +43,28 @@ else:
     logger.info("Twilio not configured. SMS/call features will run in simulated mode.")
 
 
-# ================= TOKEN SECURITY & RATE LIMITING =================
+# ================= SECURITY HELPERS & RATE LIMITING =================
 MAX_TRACKING_ATTEMPTS = 5
 LOCKOUT_DURATION_SECONDS = 600  # 10 minutes
+tracking_ip_attempts = {}
+
+def get_client_ip() -> str:
+    """
+    Safely returns client IP address without trusting spoofed X-Forwarded-For headers
+    unless explicit trusted reverse proxy configuration is enabled.
+    """
+    if os.getenv("BEHIND_TRUSTED_PROXY", "False").lower() in ("true", "1"):
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+    return request.remote_addr or "127.0.0.1"
+
+def generate_secure_otp() -> str:
+    """
+    Generates a cryptographically secure 6-digit numeric OTP in the range 100000 to 999999.
+    Uses Python's standard library secrets module (CSPRNG).
+    """
+    return str(secrets.randbelow(900000) + 100000)
 
 def hash_tracking_token(raw_token: str) -> str:
     """
@@ -73,20 +91,31 @@ def verify_tracking_token(stored_hash_or_token: str, provided_token: str) -> boo
         return True
     return False
 
-def check_tracking_rate_limit():
+def check_tracking_rate_limit(client_ip: str):
     """
-    Enforces attempt throttling on tracking lookups to prevent brute-force token guessing.
+    Enforces attempt throttling on tracking lookups using both session and client IP
+    to prevent brute-force token guessing across private/incognito browsing.
     """
     now = time.time()
-    lockout_until = session.get("track_lockout_until", 0)
-    if now < lockout_until:
-        remaining_mins = max(1, int(lockout_until - now) // 60 + 1)
+    # 1. Session lockout check (persists in server-side session)
+    sess_lockout = session.get("track_lockout_until", 0)
+    if now < sess_lockout:
+        remaining_mins = max(1, int(sess_lockout - now) // 60 + 1)
         return False, f"Too many failed verification attempts. Please wait {remaining_mins} minute(s) before trying again."
+
+    # 2. Client IP lockout check (mitigates cookie-clearing bypasses)
+    ip_record = tracking_ip_attempts.get(client_ip)
+    if ip_record:
+        lockout_until = ip_record.get("lockout_until", 0)
+        if now < lockout_until:
+            remaining_mins = max(1, int(lockout_until - now) // 60 + 1)
+            return False, f"Too many failed verification attempts. Please wait {remaining_mins} minute(s) before trying again."
+
     return True, None
 
-def record_tracking_failure():
+def record_tracking_failure(client_ip: str):
     """
-    Increments failed tracking attempts and triggers temporary lockout if threshold is exceeded.
+    Increments failed tracking attempts on both session and IP, triggering temporary lockout if exceeded.
     """
     now = time.time()
     attempts = session.get("track_attempts", 0) + 1
@@ -95,12 +124,20 @@ def record_tracking_failure():
         session["track_lockout_until"] = now + LOCKOUT_DURATION_SECONDS
         session["track_attempts"] = 0
 
-def reset_tracking_attempts():
+    ip_rec = tracking_ip_attempts.get(client_ip, {"count": 0, "lockout_until": 0})
+    ip_rec["count"] += 1
+    if ip_rec["count"] >= MAX_TRACKING_ATTEMPTS:
+        ip_rec["lockout_until"] = now + LOCKOUT_DURATION_SECONDS
+        ip_rec["count"] = 0
+    tracking_ip_attempts[client_ip] = ip_rec
+
+def reset_tracking_attempts(client_ip: str):
     """
     Clears failure counters upon successful verification.
     """
     session["track_attempts"] = 0
     session.pop("track_lockout_until", None)
+    tracking_ip_attempts.pop(client_ip, None)
 
 
 # ================= ADMINISTRATOR AUTH RATE LIMITING =================
@@ -110,9 +147,17 @@ admin_failed_attempts = {}
 
 def check_admin_rate_limit(client_ip: str):
     """
-    Throttles administrator login attempts to mitigate password brute-forcing.
+    Throttles administrator login attempts across both session state and client IP
+    to mitigate brute-force attempts across multi-worker environments.
     """
     now = time.time()
+    # 1. Session-based lockout check
+    sess_lockout = session.get("admin_lockout_until", 0)
+    if now < sess_lockout:
+        remaining_mins = max(1, int(sess_lockout - now) // 60 + 1)
+        return False, f"Too many failed administrator login attempts. Account temporarily locked for {remaining_mins} minute(s)."
+
+    # 2. IP-based lockout check
     record = admin_failed_attempts.get(client_ip)
     if record:
         lockout_until = record.get("lockout_until", 0)
@@ -123,9 +168,15 @@ def check_admin_rate_limit(client_ip: str):
 
 def record_admin_login_failure(client_ip: str):
     """
-    Records failed administrator attempt and enforces lockout if threshold met.
+    Records failed administrator attempt on both session and IP, enforcing lockout if threshold met.
     """
     now = time.time()
+    sess_attempts = session.get("admin_failed_attempts", 0) + 1
+    session["admin_failed_attempts"] = sess_attempts
+    if sess_attempts >= MAX_ADMIN_ATTEMPTS:
+        session["admin_lockout_until"] = now + ADMIN_LOCKOUT_SECONDS
+        session["admin_failed_attempts"] = 0
+
     record = admin_failed_attempts.get(client_ip, {"count": 0, "lockout_until": 0})
     record["count"] += 1
     if record["count"] >= MAX_ADMIN_ATTEMPTS:
@@ -135,8 +186,10 @@ def record_admin_login_failure(client_ip: str):
 
 def reset_admin_login_failures(client_ip: str):
     """
-    Clears failed administrator login counter upon successful authentication.
+    Clears failed administrator login counters upon successful authentication.
     """
+    session.pop("admin_failed_attempts", None)
+    session.pop("admin_lockout_until", None)
     admin_failed_attempts.pop(client_ip, None)
 
 
@@ -395,22 +448,15 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
 # ================= HELPER FUNCTIONS =================
 def send_sms_simulated(complaint_id, to_number, message):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        INSERT INTO sms_logs (complaint_id, to_number, message, status, timestamp)
-        VALUES (?, ?, ?, ?, ?)
-    """, (
-        complaint_id,
-        to_number,
-        message,
-        "Sent (Simulated)",
-        datetime.now()
-    ))
-
-    conn.commit()
-    conn.close()
+    log_entry = SMSLog(
+        complaint_id=complaint_id,
+        to_number=to_number,
+        message=message,
+        status="Sent (Simulated)",
+        timestamp=datetime.utcnow()
+    )
+    db.session.add(log_entry)
+    db.session.commit()
 
 
 def send_otp_email(email, otp):
@@ -583,22 +629,32 @@ def trigger_auto_call(complaint_id, cleaner_name, phone_number):
 
 
 def send_status_update_email(student_email, complaint_id, new_status):
-    subject = f"Anti-Ragging Incident Status Update (ID #{complaint_id})"
-
-    status = new_status.strip().lower()
-
-    if "progress" in status:
-        title = "Complaint In Progress"
-        message = "Your complaint is currently being reviewed and processed by our team."
-        status_color = "#f59e0b"
-
-    elif status in ["resolved", "closed"]:
-        title = "Complaint Resolved"
-        message = "We are happy to inform you that your complaint has been successfully resolved."
-        status_color = "#16a34a"
-
-    else:
+    if not student_email or not SMTP_EMAIL or not SMTP_PASSWORD:
         return
+
+    subject = f"Anti-Ragging Incident Status Update (ID #{complaint_id})"
+    status_lower = new_status.strip().lower()
+
+    if "under review" in status_lower or "progress" in status_lower or "assigned" in status_lower:
+        title = "Incident Report Under Review"
+        message = "Your incident report is currently under active review by the Anti-Ragging Committee."
+        status_color = "#f59e0b"
+    elif "action taken" in status_lower:
+        title = "Action Taken on Incident Report"
+        message = "Formal institutional action has been taken by the Anti-Ragging Committee regarding this report."
+        status_color = "#3b82f6"
+    elif status_lower in ["closed", "resolved"]:
+        title = "Incident Report Closed"
+        message = "This incident report matter has been concluded and formally closed by the Anti-Ragging Committee."
+        status_color = "#16a34a"
+    elif "open" in status_lower:
+        title = "Incident Report Registered"
+        message = "Your incident report has been registered and queued for committee review."
+        status_color = "#3b82f6"
+    else:
+        title = f"Incident Status: {new_status}"
+        message = f"Your incident report status has been updated to: {new_status}."
+        status_color = "#1e40af"
 
     html_body = f"""
     <html>
@@ -700,7 +756,11 @@ def send_otp():
         flash(f"A verification code was recently generated. Please wait {wait_sec} second(s) before requesting again.", "error")
         return redirect(url_for("verify_otp_page"))
 
-    otp = str(random.randint(100000, 999999))
+    # Clear any prior authenticated identity so stale sessions cannot linger
+    session.pop("verified", None)
+    session.pop("admin_logged_in", None)
+
+    otp = generate_secure_otp()
     session["otp"] = otp
     session["email"] = email
     session["otp_time"] = now
@@ -747,6 +807,7 @@ def verify_otp():
         session.pop("otp", None)
         session.pop("otp_time", None)
         session.pop("otp_resend_count", None)
+        session.pop("admin_logged_in", None)
         session["verified"] = True
         logger.info("Student authenticated successfully via OTP.")
         return redirect(url_for("student_dashboard"))
@@ -756,7 +817,7 @@ def verify_otp():
 
 
 # ================= RESEND OTP =================
-@app.route("/resend_otp")
+@app.route("/resend_otp", methods=["POST"])
 def resend_otp():
     email = session.get("email")
 
@@ -778,7 +839,7 @@ def resend_otp():
         flash("Maximum resend attempts reached. Please return to login and try again later.", "error")
         return redirect(url_for("student_login"))
 
-    new_otp = str(random.randint(100000, 999999))
+    new_otp = generate_secure_otp()
     session["otp"] = new_otp
     session["otp_time"] = now
     session["otp_resend_count"] = resend_count + 1
@@ -941,7 +1002,7 @@ def predict():
 @app.route("/admin_login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
-        client_ip = request.remote_addr or "127.0.0.1"
+        client_ip = get_client_ip()
 
         # Mandatory Requirement C: Rate limiting on administrator login
         allowed, lockout_msg = check_admin_rate_limit(client_ip)
@@ -958,6 +1019,9 @@ def admin_login():
 
         if valid_email and valid_password:
             reset_admin_login_failures(client_ip)
+            # Invalidate any existing student identity to isolate administrator session
+            session.pop("verified", None)
+            session.pop("email", None)
             session["admin_logged_in"] = True
             logger.info("Administrator successfully authenticated from IP %s", client_ip)
             return redirect(url_for("admin"))
@@ -996,6 +1060,10 @@ def admin():
 
             complaint.admin_remarks = remarks
             db.session.commit()
+            try:
+                send_status_update_email(complaint.student_email, complaint.id, complaint.status)
+            except Exception as notify_err:
+                logger.error("Failed to dispatch status update notification: %s", str(notify_err))
             flash(f"Incident #{complaint.id} updated: Status is now '{complaint.status}'.", "success")
 
         return redirect(url_for("admin"))
@@ -1063,6 +1131,10 @@ def admin_complaint_details(complaint_id):
             complaint.status = target_status
         complaint.admin_remarks = remarks
         db.session.commit()
+        try:
+            send_status_update_email(complaint.student_email, complaint.id, complaint.status)
+        except Exception as notify_err:
+            logger.error("Failed to dispatch status update notification: %s", str(notify_err))
         flash(f"Incident #{complaint.id} updated: Status is now '{complaint.status}'.", "success")
         return redirect(url_for("admin_complaint_details", complaint_id=complaint.id))
 
@@ -1171,8 +1243,10 @@ def track():
     error_message = None
     lookup_attempted = False
 
+    client_ip = get_client_ip()
+
     # 1. Rate Limiting / Attempt Throttling check
-    allowed, lockout_msg = check_tracking_rate_limit()
+    allowed, lockout_msg = check_tracking_rate_limit(client_ip)
     if not allowed:
         return render_template(
             "track.html",
@@ -1207,7 +1281,7 @@ def track():
     try:
         complaint_id = int(complaint_id_str)
     except (ValueError, TypeError):
-        record_tracking_failure()
+        record_tracking_failure(client_ip)
         return render_template(
             "track.html",
             complaint=None,
@@ -1236,7 +1310,7 @@ def track():
 
     if not is_authenticated_owner and not is_valid_token:
         # Uniform generic error prevents ticket existence enumeration
-        record_tracking_failure()
+        record_tracking_failure(client_ip)
         return render_template(
             "track.html",
             complaint=None,
@@ -1245,7 +1319,7 @@ def track():
         )
 
     # Success: reset failure throttle counter
-    reset_tracking_attempts()
+    reset_tracking_attempts(client_ip)
 
     return render_template(
         "track.html",
@@ -1260,33 +1334,29 @@ with app.app_context():
     db.create_all()
 
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-
-        cursor.execute("PRAGMA table_info(complaint)")
-        columns = [row[1] for row in cursor.fetchall()]
-
-        column_defs = {
-            "complaint_title": "VARCHAR(150)",
-            "admin_remarks": "TEXT",
-            "incident_type": "VARCHAR(100)",
-            "severity_level": "VARCHAR(50) DEFAULT 'Medium'",
-            "incident_date_time": "VARCHAR(100)",
-            "incident_location": "VARCHAR(150)",
-            "accused_details": "TEXT",
-            "witness_details": "TEXT",
-            "is_confidential": "BOOLEAN DEFAULT 0",
-            "tracking_token": "VARCHAR(64)",
-            "committee_assigned": "VARCHAR(100)"
-        }
-
-        for col_name, col_type in column_defs.items():
-            if col_name not in columns:
-                cursor.execute(f"ALTER TABLE complaint ADD COLUMN {col_name} {col_type}")
-
-        conn.commit()
-        conn.close()
-        logger.info("Database schema initialized/verified for %s.", DB_NAME)
+        from sqlalchemy import inspect as sa_inspect, text as sa_text
+        inspector = sa_inspect(db.engine)
+        if "complaint" in inspector.get_table_names():
+            columns = [col["name"] for col in inspector.get_columns("complaint")]
+            column_defs = {
+                "complaint_title": "VARCHAR(150)",
+                "admin_remarks": "TEXT",
+                "incident_type": "VARCHAR(100)",
+                "severity_level": "VARCHAR(50) DEFAULT 'Medium'",
+                "incident_date_time": "VARCHAR(100)",
+                "incident_location": "VARCHAR(150)",
+                "accused_details": "TEXT",
+                "witness_details": "TEXT",
+                "is_confidential": "BOOLEAN DEFAULT 0",
+                "tracking_token": "VARCHAR(64)",
+                "committee_assigned": "VARCHAR(100)"
+            }
+            with db.engine.connect() as connection:
+                for col_name, col_type in column_defs.items():
+                    if col_name not in columns:
+                        connection.execute(sa_text(f"ALTER TABLE complaint ADD COLUMN {col_name} {col_type}"))
+                connection.commit()
+        logger.info("Database schema initialized/verified.")
     except Exception as e:
         logger.error("Database schema migration error: %s", str(e))
 

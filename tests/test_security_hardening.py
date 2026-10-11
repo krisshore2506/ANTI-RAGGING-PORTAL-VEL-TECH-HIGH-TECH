@@ -33,6 +33,7 @@ class BaseSecurityTestCase(unittest.TestCase):
     def tearDown(self):
         db.session.remove()
         db.drop_all()
+        db.engine.dispose()
         self.app_context.pop()
 
     def get_csrf_token(self):
@@ -165,7 +166,7 @@ class TestOTPSecurity(BaseSecurityTestCase):
 
     @patch("grievai_app.send_otp_email")
     def test_otp_resend_cooldown_abuse_prevention(self, mock_send_email):
-        """Verify rapid resends are throttled within 30-second cooldown."""
+        """Verify rapid resends are throttled within 30-second cooldown via POST with CSRF."""
         csrf = self.get_csrf_token()
 
         self.client.post("/send_otp", data={
@@ -173,9 +174,35 @@ class TestOTPSecurity(BaseSecurityTestCase):
             "csrf_token": csrf
         })
 
-        # Immediate resend attempt should hit 30s cooldown
-        resp_resend = self.client.get("/resend_otp", follow_redirects=True)
+        # Immediate resend attempt via POST should hit 30s cooldown
+        resp_resend = self.client.post("/resend_otp", data={"csrf_token": csrf}, follow_redirects=True)
         self.assertIn(b"Please wait", resp_resend.data)
+
+    def test_otp_resend_requires_post_and_csrf(self):
+        """Verify GET to /resend_otp is rejected and POST without CSRF returns 403."""
+        # 1. GET request is rejected with 405 Method Not Allowed
+        resp_get = self.client.get("/resend_otp")
+        self.assertEqual(resp_get.status_code, 405)
+
+        # 2. POST without CSRF token returns 403 Forbidden
+        with self.client.session_transaction() as sess:
+            sess["email"] = "student@velhightech.com"
+            sess["otp"] = "123456"
+            sess["otp_time"] = time.time() - 35  # Outside cooldown
+
+        resp_no_csrf = self.client.post("/resend_otp")
+        self.assertEqual(resp_no_csrf.status_code, 403)
+
+    def test_cryptographic_otp_generation(self):
+        """Verify OTP generation uses secrets CSPRNG and consistently produces 6 digits."""
+        for _ in range(50):
+            otp = grievai_app.generate_secure_otp()
+            self.assertIsInstance(otp, str)
+            self.assertEqual(len(otp), 6)
+            self.assertTrue(otp.isdigit())
+            val = int(otp)
+            self.assertGreaterEqual(val, 100000)
+            self.assertLessEqual(val, 999999)
 
 
 class TestCSRFProtection(BaseSecurityTestCase):
@@ -237,6 +264,41 @@ class TestAuthenticationGuards(BaseSecurityTestCase):
             resp = self.client.get(endpoint)
             self.assertEqual(resp.status_code, 302)
             self.assertIn("/admin_login", resp.headers.get("Location", ""))
+
+    @patch("grievai_app.send_otp_email")
+    def test_new_login_invalidates_conflicting_roles(self, mock_send):
+        """Verify starting student login or admin login invalidates previous conflicting sessions."""
+        csrf = self.get_csrf_token()
+
+        # 1. Starting student login revokes prior admin session
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["verified"] = True
+
+        self.client.post("/send_otp", data={
+            "email": "fresh_student@velhightech.com",
+            "csrf_token": csrf
+        })
+
+        with self.client.session_transaction() as sess:
+            self.assertIsNone(sess.get("admin_logged_in"))
+            self.assertIsNone(sess.get("verified"))
+
+        # 2. Administrator login revokes prior student identity
+        with self.client.session_transaction() as sess:
+            sess["verified"] = True
+            sess["email"] = "student_to_be_revoked@velhightech.com"
+
+        self.client.post("/admin_login", data={
+            "email": "admin@velhightech.com",
+            "password": "AdminSecurePass123",
+            "csrf_token": csrf
+        })
+
+        with self.client.session_transaction() as sess:
+            self.assertTrue(sess.get("admin_logged_in"))
+            self.assertIsNone(sess.get("verified"))
+            self.assertIsNone(sess.get("email"))
 
 
 class TestComplaintOwnershipAndTracking(BaseSecurityTestCase):
@@ -429,6 +491,77 @@ class TestOTPEmailContentAndDelivery(BaseSecurityTestCase):
 
         self.assertNotIn("<987654>&", html_content)
         self.assertIn("&lt;987654&gt;&amp;", html_content)
+
+
+class TestComplaintStatusChangeNotifications(BaseSecurityTestCase):
+    @patch("grievai_app.send_status_update_email")
+    def test_admin_dashboard_status_change_triggers_notification(self, mock_notify):
+        """Verify status change on admin dashboard triggers student notification with mocked email."""
+        c = Complaint(
+            student_email="notify_student@velhightech.com",
+            complaint_title="Hostel Incident",
+            complaint_text="Detailed complaint description",
+            department="Hostel hazing or coercion",
+            status="Open"
+        )
+        db.session.add(c)
+        db.session.commit()
+        complaint_id = c.id
+
+        # Log in as admin
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+
+        csrf = self.get_csrf_token()
+        resp = self.client.post("/admin", data={
+            "complaint_id": str(complaint_id),
+            "status": "Under Review",
+            "admin_remarks": "Action initiated by committee",
+            "csrf_token": csrf
+        }, follow_redirects=True)
+
+        self.assertEqual(resp.status_code, 200)
+        # Verify db was updated
+        updated = Complaint.query.get(complaint_id)
+        self.assertEqual(updated.status, "Under Review")
+
+        # Verify notification was dispatched
+        self.assertTrue(mock_notify.called)
+        call_args = mock_notify.call_args[0]
+        self.assertEqual(call_args[0], "notify_student@velhightech.com")
+        self.assertEqual(call_args[1], complaint_id)
+        self.assertEqual(call_args[2], "Under Review")
+
+    @patch("grievai_app.send_status_update_email")
+    def test_admin_detail_status_change_triggers_notification(self, mock_notify):
+        """Verify status change on complaint detail page triggers student notification."""
+        c = Complaint(
+            student_email="victim@velhightech.com",
+            complaint_title="Verbal Ragging Incident",
+            complaint_text="Incident narrative",
+            department="Verbal or emotional harassment",
+            status="Open"
+        )
+        db.session.add(c)
+        db.session.commit()
+        complaint_id = c.id
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+
+        csrf = self.get_csrf_token()
+        resp = self.client.post(f"/admin/complaint/{complaint_id}", data={
+            "status": "Action Taken",
+            "admin_remarks": "Formal disciplinary notice issued",
+            "csrf_token": csrf
+        }, follow_redirects=True)
+
+        self.assertEqual(resp.status_code, 200)
+        updated = Complaint.query.get(complaint_id)
+        self.assertEqual(updated.status, "Action Taken")
+
+        self.assertTrue(mock_notify.called)
+        self.assertEqual(mock_notify.call_args[0][2], "Action Taken")
 
 
 if __name__ == "__main__":
