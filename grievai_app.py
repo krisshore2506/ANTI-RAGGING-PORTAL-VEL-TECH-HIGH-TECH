@@ -470,6 +470,17 @@ def send_otp_email(email, otp):
 
     safe_otp = html.escape(str(otp).strip())
 
+    if os.getenv("DEV_SIMULATE_EMAIL", "False").lower() in ("true", "1"):
+        logger.info("[DEV SIMULATED EMAIL] Generated OTP %s for %s", safe_otp, email)
+        otp_file = os.getenv("DEV_OTP_FILE")
+        if otp_file:
+            try:
+                with open(otp_file, "w", encoding="utf-8") as f:
+                    f.write(safe_otp)
+            except Exception:
+                pass
+        return
+
     msg = MIMEMultipart("alternative")
     msg["Subject"] = "Anti-Ragging Portal | Email Verification"
     msg["From"] = SMTP_EMAIL
@@ -720,6 +731,10 @@ def send_status_update_email(student_email, complaint_id, new_status):
     </body>
     </html>
     """
+
+    if os.getenv("DEV_SIMULATE_EMAIL", "False").lower() in ("true", "1"):
+        logger.info("[DEV SIMULATED EMAIL] Status update for incident #%s -> %s", complaint_id, new_status)
+        return
 
     try:
         msg = MIMEMultipart("alternative")

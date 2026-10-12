@@ -381,6 +381,12 @@
 
 
 @media (max-width: 768px) {
+  .step-label {
+    white-space: normal;
+    font-size: 11px;
+    line-height: 1.25;
+    max-width: 75px;
+  }
   .dashboard-header {
     padding: 10px 4%;
   }
