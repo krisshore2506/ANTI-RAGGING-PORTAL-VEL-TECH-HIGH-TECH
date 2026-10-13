@@ -1,6 +1,7 @@
 /* ==========================================================================
    ANTI-RAGGING PORTAL LANDING PAGE CSS (landing.css)
    Vel Tech High Tech Dr. Rangarajan Dr. Sakunthala Engineering College
+   Institutional Modern UI System
    ========================================================================== */
 
 .landing-body {
@@ -12,9 +13,7 @@
   max-width: 100vw;
 }
 
-/* --------------------------------------------------------------------------
-   Navigation Bar
-   -------------------------------------------------------------------------- */
+/* Navigation Bar */
 .landing-nav {
   display: flex;
   justify-content: space-between;
@@ -26,29 +25,25 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  gap: 16px;
 }
 
 .brand-logo-block {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   text-decoration: none;
-}
-
-.brand-logo-block img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .brand-title {
-  font-size: 21px;
+  font-size: 20px;
   font-weight: 700;
-  color: var(--primary, #1e40af);
+  color: var(--primary-navy, #1e3a8a);
   letter-spacing: -0.4px;
   margin: 0;
-  line-height: 1;
+  line-height: 1.2;
   display: inline-flex;
   align-items: center;
 }
@@ -58,27 +53,29 @@
   align-items: center !important;
   gap: 10px !important;
   flex-shrink: 0 !important;
+  flex-wrap: wrap;
 }
 
 .nav-actions a.btn-primary,
 .nav-actions a.btn-secondary {
-  padding: 8px 16px !important;
+  padding: 9px 18px !important;
   font-size: 13.5px !important;
   font-weight: 600 !important;
   white-space: nowrap !important;
   display: inline-flex !important;
   align-items: center !important;
+  justify-content: center !important;
   gap: 6px !important;
+  min-height: 40px !important;
+  border-radius: var(--radius-sm, 6px) !important;
 }
 
-/* --------------------------------------------------------------------------
-   Hero Section (Desktop 2-Column Grid)
-   -------------------------------------------------------------------------- */
+/* Hero Section */
 .hero-section {
   display: grid;
   grid-template-columns: 1.18fr 0.82fr;
   gap: 48px;
-  padding: 68px 6% 60px;
+  padding: 64px 6% 56px;
   align-items: center;
   max-width: 1320px;
   margin: 0 auto;
@@ -97,8 +94,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background-color: #eff6ff;
-  color: #1e40af;
+  background-color: var(--accent-subtle, #eff6ff);
+  color: var(--primary-navy, #1e3a8a);
   font-weight: 700;
   font-size: 12px;
   letter-spacing: 0.8px;
@@ -110,24 +107,24 @@
 }
 
 .hero-title {
-  font-size: 46px;
+  font-size: clamp(28px, 4.5vw, 46px);
   font-weight: 800;
-  line-height: 1.16;
-  color: #0f172a;
+  line-height: 1.18;
+  color: var(--text, #0f172a);
   margin-bottom: 20px;
   letter-spacing: -0.8px;
 }
 
 .hero-title span {
-  color: #1e40af;
-  background: linear-gradient(135deg, #2563eb, #1e3a8a);
+  color: var(--primary-navy, #1e3a8a);
+  background: linear-gradient(135deg, var(--primary-blue, #3b82f6), var(--primary-navy, #1e3a8a));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .hero-subtitle {
-  font-size: 16.5px;
-  color: #334155;
+  font-size: 16px;
+  color: var(--text-body, #1e293b);
   margin-bottom: 30px;
   line-height: 1.65;
   max-width: 620px;
@@ -138,61 +135,64 @@
   gap: 14px;
   flex-wrap: wrap;
   margin-bottom: 32px;
+  width: 100%;
 }
 
 .hero-ctas a.btn-primary {
-  background: linear-gradient(135deg, #1e40af, #1e3a8a) !important;
+  background: var(--primary-navy, #1e3a8a) !important;
   color: #ffffff !important;
   padding: 12px 24px !important;
-  border-radius: 8px !important;
+  border-radius: var(--radius-sm, 6px) !important;
   font-weight: 600 !important;
   font-size: 15px !important;
   text-decoration: none !important;
   display: inline-flex !important;
   align-items: center !important;
+  justify-content: center !important;
   gap: 8px !important;
-  box-shadow: 0 4px 14px rgba(30, 64, 175, 0.25) !important;
-  transition: all 0.2s ease !important;
+  box-shadow: var(--shadow-sm) !important;
+  min-height: 46px !important;
+  transition: var(--transition) !important;
 }
 
 .hero-ctas a.btn-primary:hover {
+  background: var(--primary-dark, #172554) !important;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(30, 64, 175, 0.35) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
 .hero-ctas a.btn-secondary {
   background: #ffffff !important;
-  color: #1e40af !important;
-  border: 1.5px solid #bfdbfe !important;
+  color: var(--primary-navy, #1e3a8a) !important;
+  border: 1.5px solid var(--border, #e2e8f0) !important;
   padding: 12px 24px !important;
-  border-radius: 8px !important;
+  border-radius: var(--radius-sm, 6px) !important;
   font-weight: 600 !important;
   font-size: 15px !important;
   text-decoration: none !important;
   display: inline-flex !important;
   align-items: center !important;
+  justify-content: center !important;
   gap: 8px !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
-  transition: all 0.2s ease !important;
+  box-shadow: var(--shadow-sm) !important;
+  min-height: 46px !important;
+  transition: var(--transition) !important;
 }
 
 .hero-ctas a.btn-secondary:hover {
+  background: var(--bg-subtle, #f1f5f9) !important;
+  border-color: #cbd5e1 !important;
   transform: translateY(-2px);
-  border-color: #3b82f6 !important;
-  background-color: #eff6ff !important;
-  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.12) !important;
 }
 
-/* --------------------------------------------------------------------------
-   Benefit Indicators (Shield, Lock, Clipboard)
-   -------------------------------------------------------------------------- */
+/* Benefit Indicators */
 .hero-benefits {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
   padding-top: 24px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--border, #e2e8f0);
   width: 100%;
   max-width: 620px;
 }
@@ -203,50 +203,49 @@
   gap: 8px;
   background: #ffffff;
   padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border, #e2e8f0);
+  box-shadow: var(--shadow-sm);
 }
 
 .benefit-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  color: #1e40af;
+  width: 22px;
+  height: 22px;
+  color: var(--primary-navy, #1e3a8a);
   flex-shrink: 0;
 }
 
 .benefit-icon svg {
   width: 18px;
   height: 18px;
-  stroke: #1e40af;
+  stroke: var(--primary-navy, #1e3a8a);
 }
 
 .benefit-label {
-  color: #0f172a;
+  color: var(--text, #0f172a);
   font-weight: 600;
   font-size: 13.5px;
   white-space: nowrap;
 }
 
-/* --------------------------------------------------------------------------
-   Right-Side Hero Card (Your Safety Matters)
-   -------------------------------------------------------------------------- */
+/* Right-Side Hero Card */
 .hero-image-block {
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
+  width: 100%;
 }
 
 .hero-card.safety-card {
   background: #ffffff;
   border: 1.5px solid #dbeafe;
-  border-radius: 20px;
-  padding: 42px 32px;
-  box-shadow: 0 20px 25px -5px rgba(30, 64, 175, 0.08), 0 8px 10px -6px rgba(30, 64, 175, 0.04);
+  border-radius: var(--radius-lg, 16px);
+  padding: 38px 28px;
+  box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -254,13 +253,13 @@
   max-width: 390px;
   width: 100%;
   box-sizing: border-box;
-  transition: all 0.3s ease;
+  transition: var(--transition);
   position: relative;
 }
 
 .hero-card.safety-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 24px 34px -8px rgba(30, 64, 175, 0.16);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
   border-color: #93c5fd;
 }
 
@@ -268,7 +267,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 22px;
+  margin-bottom: 20px;
   gap: 12px;
 }
 
@@ -276,17 +275,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  filter: drop-shadow(0 8px 16px rgba(37, 99, 235, 0.22));
+  filter: drop-shadow(0 6px 14px rgba(30, 58, 138, 0.18));
   transition: transform 0.3s ease;
 }
 
 .hero-card.safety-card:hover .safety-shield-wrapper {
-  transform: scale(1.05);
+  transform: scale(1.04);
 }
 
 .safety-badge {
-  background-color: #eff6ff;
-  color: #1e40af;
+  background-color: var(--accent-subtle, #eff6ff);
+  color: var(--primary-navy, #1e3a8a);
   font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.5px;
@@ -296,23 +295,21 @@
 }
 
 .safety-card h3 {
-  color: #0f172a;
-  font-size: 22px;
+  color: var(--text, #0f172a);
+  font-size: 21px;
   font-weight: 800;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   letter-spacing: -0.3px;
 }
 
 .safety-card p {
-  color: #475569;
-  font-size: 14.5px;
+  color: var(--text-muted, #64748b);
+  font-size: 14px;
   line-height: 1.6;
   margin: 0;
 }
 
-/* --------------------------------------------------------------------------
-   Feature Grid Section
-   -------------------------------------------------------------------------- */
+/* Feature Grid Section */
 .features-section {
   padding: 64px 6%;
   background-color: #ffffff;
@@ -323,26 +320,27 @@
 .section-header {
   text-align: center;
   max-width: 650px;
-  margin: 0 auto 48px;
+  margin: 0 auto 44px;
 }
 
 .section-header h2 {
-  font-size: 32px;
+  font-size: clamp(24px, 3.5vw, 32px);
   font-weight: 800;
-  color: var(--primary-dark, #1e3a8a);
-  margin-bottom: 14px;
+  color: var(--primary-navy, #1e3a8a);
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
 }
 
 .section-header p {
   color: var(--text-muted, #64748b);
-  font-size: 16px;
+  font-size: 15.5px;
   line-height: 1.5;
 }
 
 .features-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 28px;
+  gap: 24px;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -350,60 +348,58 @@
 .feature-card {
   background: var(--bg, #f8fafc);
   border: 1px solid var(--border, #e2e8f0);
-  border-radius: var(--radius-md, 12px);
-  padding: 28px;
-  transition: var(--transition, all 0.3s ease);
-  cursor: default;
+  border-radius: var(--radius-md, 10px);
+  padding: 26px;
+  transition: var(--transition);
 }
 
 .feature-card:hover {
-  transform: translateY(-6px);
-  box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
-  border-color: var(--accent, #60a5fa);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: #93c5fd;
   background: #ffffff;
 }
 
 .feature-icon {
-  font-size: 30px;
   margin-bottom: 16px;
-  color: var(--primary, #1e40af);
-  display: inline-block;
+  color: var(--primary-navy, #1e3a8a);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background-color: var(--accent-light, #dbeafe);
-  width: 56px;
-  height: 56px;
-  line-height: 56px;
-  text-align: center;
-  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
 }
 
 .feature-card h3 {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
-  color: var(--primary-dark, #1e3a8a);
-  margin-bottom: 10px;
+  color: var(--primary-navy, #1e3a8a);
+  margin-bottom: 8px;
 }
 
 .feature-card p {
-  font-size: 14px;
+  font-size: 13.5px;
   color: var(--text-muted, #64748b);
   line-height: 1.6;
+  margin: 0;
 }
 
-/* --------------------------------------------------------------------------
-   Steps Section
-   -------------------------------------------------------------------------- */
+/* Steps Section */
 .steps-section {
-  padding: 72px 6%;
+  padding: 64px 6%;
   max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
 }
 
 .steps-timeline {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 28px;
+  gap: 24px;
   position: relative;
-  margin-top: 40px;
+  margin-top: 36px;
 }
 
 .step-item {
@@ -412,37 +408,36 @@
 }
 
 .step-num {
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, var(--primary-light, #3b82f6), var(--primary, #1e40af));
+  width: 44px;
+  height: 44px;
+  background: var(--primary-navy, #1e3a8a);
   color: #ffffff;
   font-weight: 700;
-  font-size: 18px;
-  line-height: 48px;
+  font-size: 17px;
+  line-height: 44px;
   border-radius: 50%;
-  margin: 0 auto 18px;
-  box-shadow: 0 4px 10px rgba(30, 64, 175, 0.2);
+  margin: 0 auto 16px;
+  box-shadow: 0 4px 10px rgba(30, 58, 138, 0.2);
 }
 
 .step-item h3 {
   font-size: 16px;
   font-weight: 700;
-  color: var(--primary-dark, #1e3a8a);
-  margin-bottom: 8px;
+  color: var(--primary-navy, #1e3a8a);
+  margin-bottom: 6px;
 }
 
 .step-item p {
   font-size: 13px;
   color: var(--text-muted, #64748b);
   line-height: 1.5;
+  margin: 0;
 }
 
-/* --------------------------------------------------------------------------
-   Footer Section
-   -------------------------------------------------------------------------- */
+/* Footer Section */
 .landing-footer {
   margin-top: auto;
-  background-color: var(--primary-dark, #1e3a8a);
+  background-color: var(--primary-dark, #172554);
   color: #ffffff;
   padding: 40px 6% 30px;
   text-align: center;
@@ -455,44 +450,41 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   padding-bottom: 20px;
   margin-bottom: 20px;
   text-align: left;
 }
 
 .landing-footer-brand h2 {
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 700;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
 }
 
 .landing-footer-brand p {
   color: var(--accent-light, #dbeafe);
-  font-size: 12px;
+  font-size: 12.5px;
+  margin: 0;
 }
 
 .landing-footer-copy {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.5;
 }
 
-/* --------------------------------------------------------------------------
-   Responsive Layout & Media Queries
-   -------------------------------------------------------------------------- */
+/* Responsive Media Queries */
 @media (max-width: 992px) {
   .hero-section {
     grid-template-columns: 1fr;
     text-align: center;
-    padding: 48px 5% 44px;
+    padding: 48px 5% 40px;
     gap: 36px;
   }
   .hero-content {
     align-items: center;
     text-align: center;
-  }
-  .hero-title {
-    font-size: 38px;
   }
   .hero-subtitle {
     margin-left: auto;
@@ -522,74 +514,52 @@
   .landing-nav {
     padding: 10px 4% !important;
   }
-  .brand-header {
-    gap: 10px !important;
-  }
-  .college-logo-container {
-    width: 68px !important;
-    height: 42px !important;
-  }
   .brand-title {
-    font-size: 16.5px !important;
+    font-size: 17px !important;
   }
   .nav-actions {
     gap: 8px !important;
   }
   .nav-actions a.btn-primary,
   .nav-actions a.btn-secondary {
-    padding: 6px 12px !important;
-    font-size: 12.5px !important;
-  }
-  .hero-title {
-    font-size: 32px;
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    min-height: 40px !important;
   }
 }
 
 @media (max-width: 600px) {
   .landing-nav {
-    padding: 8px 10px !important;
-  }
-  .brand-header {
-    gap: 8px !important;
-  }
-  .college-logo-container {
-    width: 48px !important;
-    height: 30px !important;
-    border-radius: 4px !important;
+    padding: 10px 12px !important;
+    flex-wrap: wrap;
+    justify-content: space-between;
   }
   .brand-title {
-    font-size: 14px !important;
-    white-space: nowrap !important;
+    font-size: 15px !important;
   }
   .desktop-only {
     display: none !important;
   }
   .nav-actions {
-    gap: 5px !important;
+    gap: 6px !important;
   }
   .nav-actions a.btn-primary,
   .nav-actions a.btn-secondary {
-    padding: 5px 8px !important;
-    font-size: 11px !important;
-    gap: 3px !important;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    min-height: 38px !important;
   }
   .hero-section {
-    padding: 28px 4% 28px !important;
-    gap: 26px !important;
+    padding: 32px 4% 28px !important;
+    gap: 28px !important;
   }
   .hero-tag {
     font-size: 11px !important;
     padding: 5px 12px !important;
     margin-bottom: 14px !important;
   }
-  .hero-title {
-    font-size: 26px !important;
-    letter-spacing: -0.5px !important;
-    line-height: 1.25 !important;
-  }
   .hero-subtitle {
     font-size: 14.5px !important;
-    line-height: 1.55 !important;
     margin-bottom: 22px !important;
   }
   .hero-ctas {
@@ -601,11 +571,8 @@
   .hero-ctas a.btn-primary,
   .hero-ctas a.btn-secondary {
     width: 100% !important;
-    box-sizing: border-box !important;
-    text-align: center !important;
-    justify-content: center !important;
-    padding: 11px 16px !important;
-    font-size: 14px !important;
+    min-height: 46px !important;
+    font-size: 14.5px !important;
   }
   .hero-benefits {
     flex-direction: column !important;
@@ -623,7 +590,7 @@
   }
   .hero-card.safety-card {
     padding: 28px 20px !important;
-    border-radius: 16px !important;
+    border-radius: 14px !important;
   }
   .safety-card h3 {
     font-size: 19px !important;
@@ -631,31 +598,27 @@
   .safety-card p {
     font-size: 13.5px !important;
   }
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+  .steps-timeline {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 360px) {
   .landing-nav {
-    padding: 6px 6px !important;
-  }
-  .brand-header {
-    gap: 4px !important;
-  }
-  .college-logo-container {
-    width: 40px !important;
-    height: 25px !important;
+    padding: 8px 8px !important;
   }
   .brand-title {
-    font-size: 12px !important;
+    font-size: 13.5px !important;
   }
   .nav-actions {
-    gap: 3px !important;
+    gap: 4px !important;
   }
   .nav-actions a.btn-primary,
   .nav-actions a.btn-secondary {
-    padding: 4px 6px !important;
-    font-size: 10px !important;
-  }
-  .hero-title {
-    font-size: 23px !important;
+    padding: 6px 9px !important;
+    font-size: 11px !important;
   }
 }

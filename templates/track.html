@@ -42,7 +42,7 @@
                 </p>
             </div>
             
-            <form method="POST" action="/track" style="display: grid; grid-template-columns: 1fr 1.6fr auto; gap: 14px; align-items: flex-end;">
+            <form method="POST" action="/track" class="track-lookup-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="id-input" style="font-size: 13px; font-weight: 600;">Ticket ID <span class="req-star">*</span></label>

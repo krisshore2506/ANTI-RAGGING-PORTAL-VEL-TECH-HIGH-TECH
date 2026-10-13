@@ -1,74 +1,110 @@
 /* ==========================================================================
-   EDUSORT GLOBAL STYLE SHEET - FOUNDATION & VARIABLES
+   ANTI-RAGGING PORTAL - INSTITUTIONAL DESIGN SYSTEM & GLOBAL FOUNDATION
+   Vel Tech High Tech Dr. Rangarajan Dr. Sakunthala Engineering College
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  /* Brand Colors */
-  --primary: #1e40af;       /* Deep Blue */
-  --primary-dark: #1e3a8a;  /* Dark Blue */
-  --primary-light: #3b82f6; /* Bright Blue */
-  --accent: #60a5fa;        /* Light Blue */
-  --accent-light: #dbeafe;  /* Soft Blue Tint */
+  /* Institutional Brand Palette */
+  --primary-navy: #1e3a8a;       /* Deep Institutional Navy */
+  --primary-blue: #3b82f6;       /* Standard Accessible Blue */
+  --primary-dark: #172554;       /* Ultra-Dark Navy Accent */
+  --primary: #1e3a8a;            /* Primary Identity Token */
+  --primary-light: #3b82f6;      /* Interactive Blue Token */
+  --accent: #60a5fa;             /* Soft Accent */
+  --accent-light: #dbeafe;       /* Soft Blue Tint */
+  --accent-subtle: #eff6ff;      /* Ultra-Light Blue Tint */
   
-  /* Neutral Palette */
-  --bg: #f8fafc;            /* Clean light grey-blue */
-  --card-bg: rgba(255, 255, 255, 0.95);
-  --text: #0f172a;          /* Slate 900 */
-  --text-muted: #64748b;    /* Slate 500 */
-  --border: #e2e8f0;        /* Slate 200 */
+  /* Restrained Neutral Palette */
+  --bg: #f8fafc;                 /* Neutral Canvas Slate-50 */
+  --bg-subtle: #f1f5f9;          /* Slate-100 */
+  --card-bg: #ffffff;            /* Pure Surface White */
+  --text: #0f172a;               /* Primary Text Slate-900 */
+  --text-body: #1e293b;          /* Body Text Slate-800 */
+  --text-muted: #64748b;         /* Muted Label Slate-500 */
+  --border: #e2e8f0;             /* Standard Border Slate-200 */
+  --border-focus: #3b82f6;       /* Focus Border */
   
-  /* Status Colors */
-  --status-open: #3b82f6;       /* Blue */
-  --status-assigned: #8b5cf6;   /* Purple */
-  --status-progress: #f59e0b;   /* Amber */
-  --status-resolved: #10b981;   /* Emerald */
-  --status-escalated: #ef4444;  /* Red */
+  /* Restrained Institutional Status Colors */
+  --status-open: #2563eb;        /* Open - Institutional Blue */
+  --status-open-bg: #eff6ff;
+  --status-open-border: #bfdbfe;
+  
+  --status-assigned: #7c3aed;    /* Assigned - Indigo/Purple */
+  --status-assigned-bg: #f5f3ff;
+  --status-assigned-border: #ddd6fe;
+  
+  --status-progress: #d97706;    /* In Review - Restrained Amber */
+  --status-progress-bg: #fffbeb;
+  --status-progress-border: #fde68a;
+  
+  --status-resolved: #059669;    /* Resolved / Closed - Restrained Emerald */
+  --status-resolved-bg: #ecfdf5;
+  --status-resolved-border: #a7f3d0;
+  
+  --status-escalated: #dc2626;   /* Escalated / Urgent - Deep Crimson */
+  --status-escalated-bg: #fef2f2;
+  --status-escalated-border: #fecaca;
   
   /* Priority Colors */
-  --prio-low: #10b981;
-  --prio-medium: #f59e0b;
-  --prio-high: #ef4444;
+  --prio-low: #059669;
+  --prio-medium: #d97706;
+  --prio-high: #dc2626;
 
   /* Typography */
-  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-main: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   
   /* Shadows & Radius */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-premium: 0 20px 25px -5px rgba(30, 64, 175, 0.1), 0 10px 10px -5px rgba(30, 64, 175, 0.04);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+  --shadow-premium: 0 20px 25px -5px rgba(30, 58, 138, 0.1), 0 8px 10px -6px rgba(30, 58, 138, 0.05);
   --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --transition: all 0.2s ease-in-out;
 }
 
-/* Base resets */
-* {
+/* Base resets & Box-Sizing */
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   font-family: var(--font-main);
   background-color: var(--bg);
-  color: var(--text);
+  color: var(--text-body);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Accessibility Focus Ring */
+:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
 }
 
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+/* Reduced Motion Preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Common Layout Elements */
@@ -76,59 +112,86 @@ body {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 30px;
-  box-shadow: var(--shadow-md);
-  backdrop-filter: blur(8px);
-  animation: fadeIn 0.4s ease-out;
+  padding: 28px 32px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+}
+
+@media (max-width: 640px) {
+  .container-box {
+    padding: 20px 16px;
+    border-radius: var(--radius-sm);
+  }
 }
 
 /* Buttons */
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary-light), var(--primary));
+  background-color: var(--primary-navy);
   color: #ffffff;
-  border: none;
+  border: 1px solid var(--primary-navy);
   border-radius: var(--radius-sm);
-  padding: 12px 24px;
-  font-weight: 500;
-  font-size: 15px;
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 14.5px;
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: 0 4px 10px rgba(30, 64, 175, 0.2);
+  box-shadow: var(--shadow-sm);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  text-decoration: none;
+  min-height: 44px;
+  touch-action: manipulation;
+  line-height: 1.2;
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(30, 64, 175, 0.35);
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-primary:active {
-  transform: translateY(0);
+  transform: translateY(1px);
 }
 
 .btn-secondary {
-  background: #ffffff;
-  color: var(--primary);
-  border: 1px solid var(--primary-light);
+  background-color: #ffffff;
+  color: var(--primary-navy);
+  border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 12px 24px;
-  font-weight: 500;
-  font-size: 15px;
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 14.5px;
   cursor: pointer;
   transition: var(--transition);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  text-decoration: none;
+  min-height: 44px;
+  touch-action: manipulation;
+  line-height: 1.2;
 }
 
 .btn-secondary:hover {
-  background: var(--accent-light);
-  transform: translateY(-2px);
+  background-color: var(--bg-subtle);
+  border-color: #cbd5e1;
+  color: var(--primary-dark);
+}
+
+.btn-secondary:active {
+  transform: translateY(1px);
+}
+
+/* Touch Friendly Buttons on Mobile */
+@media (max-width: 480px) {
+  .btn-primary, .btn-secondary {
+    width: 100%;
+    padding: 12px 18px;
+  }
 }
 
 /* Form Inputs */
@@ -140,20 +203,29 @@ body {
 }
 
 .form-group label {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13.5px;
+  font-weight: 600;
   color: var(--text);
+  line-height: 1.3;
 }
 
 .form-control {
   width: 100%;
-  padding: 12px 16px;
-  border: 1px solid var(--border);
+  padding: 11px 14px;
+  border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
-  font-size: 14px;
+  font-size: 15px;
   font-family: var(--font-main);
   background-color: #ffffff;
+  color: var(--text);
   transition: var(--transition);
+  min-height: 44px;
+}
+
+@media (max-width: 480px) {
+  .form-control {
+    font-size: 16px;
+  }
 }
 
 .form-control:focus {
@@ -162,9 +234,17 @@ body {
   box-shadow: 0 0 0 3px var(--accent-light);
 }
 
+.form-control:disabled,
+.form-control[readonly] {
+  background-color: var(--bg-subtle);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
 textarea.form-control {
   resize: vertical;
   min-height: 100px;
+  line-height: 1.5;
 }
 
 /* Status Chips / Badges */
@@ -178,45 +258,67 @@ textarea.form-control {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  line-height: 1;
 }
 
 .badge-open {
-  background-color: #eff6ff;
+  background-color: var(--status-open-bg);
   color: var(--status-open);
+  border: 1px solid var(--status-open-border);
 }
 
 .badge-assigned {
-  background-color: #f5f3ff;
+  background-color: var(--status-assigned-bg);
   color: var(--status-assigned);
+  border: 1px solid var(--status-assigned-border);
 }
 
 .badge-progress {
-  background-color: #fffbeb;
+  background-color: var(--status-progress-bg);
   color: var(--status-progress);
+  border: 1px solid var(--status-progress-border);
 }
 
 .badge-resolved {
-  background-color: #ecfdf5;
+  background-color: var(--status-resolved-bg);
   color: var(--status-resolved);
+  border: 1px solid var(--status-resolved-border);
 }
 
 .badge-escalated {
-  background-color: #fef2f2;
+  background-color: var(--status-escalated-bg);
   color: var(--status-escalated);
+  border: 1px solid var(--status-escalated-border);
 }
 
 /* Priority Chips */
 .prio-badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
+  padding: 3px 8px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
+  line-height: 1.2;
 }
-.prio-low { background-color: #ecfdf5; color: var(--prio-low); }
-.prio-medium { background-color: #fffbeb; color: var(--prio-medium); }
-.prio-high { background-color: #fef2f2; color: var(--prio-high); }
+
+.prio-low {
+  background-color: #ecfdf5;
+  color: var(--prio-low);
+  border: 1px solid #a7f3d0;
+}
+
+.prio-medium {
+  background-color: #fffbeb;
+  color: var(--prio-medium);
+  border: 1px solid #fde68a;
+}
+
+.prio-high {
+  background-color: #fef2f2;
+  color: var(--prio-high);
+  border: 1px solid #fecaca;
+}
 
 /* Alert Styling */
 .alert {
@@ -225,59 +327,64 @@ textarea.form-control {
   font-size: 14px;
   margin-bottom: 20px;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  animation: fadeIn 0.3s ease-out;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.45;
 }
 
 .alert-error {
-  background-color: #fee2e2;
+  background-color: #fef2f2;
   border: 1px solid #fecaca;
   color: #991b1b;
 }
 
 .alert-success {
-  background-color: #d1fae5;
+  background-color: #ecfdf5;
   border: 1px solid #a7f3d0;
   color: #065f46;
 }
 
 .alert-info {
-  background-color: #e0f2fe;
-  border: 1px solid #bae6fd;
-  color: #0369a1;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
 }
 
-/* Tables */
+/* Responsive Tables */
 .table-responsive {
   width: 100%;
   overflow-x: auto;
-  border-radius: var(--radius-md);
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
+  background-color: #ffffff;
+  margin-bottom: 20px;
 }
 
 .custom-table {
   width: 100%;
   border-collapse: collapse;
-  background-color: #ffffff;
   text-align: left;
+  min-width: 600px;
 }
 
 .custom-table th {
-  background-color: #f1f5f9;
+  background-color: #f8fafc;
   color: var(--text-muted);
   font-weight: 600;
-  font-size: 13px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+  padding: 12px 16px;
+  border-bottom: 1.5px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .custom-table td {
-  padding: 14px 18px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
-  font-size: 14px;
-  color: var(--text);
+  font-size: 13.5px;
+  color: var(--text-body);
 }
 
 .custom-table tr:last-child td {
@@ -287,7 +394,6 @@ textarea.form-control {
 .custom-table tr:hover td {
   background-color: #f8fafc;
 }
-
 
 /* ==========================================================================
    OFFICIAL COLLEGE EMBLEM & LOGO COMMON STYLING
@@ -299,21 +405,21 @@ textarea.form-control {
 .admin-brand {
   display: inline-flex !important;
   align-items: center !important;
-  gap: 14px;
+  gap: 12px;
   text-decoration: none;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .college-logo-container {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 86px;
-  height: 53.5px;
+  width: 82px;
+  height: 51px;
   background: #000000;
   border-radius: 6px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16);
   border: 1px solid rgba(15, 23, 42, 0.12);
   flex-shrink: 0;
   vertical-align: middle;
@@ -329,10 +435,10 @@ textarea.form-control {
 
 /* Auth Cards Large Variant (Student Login, OTP, Admin Login, Error) */
 .college-logo-container-lg {
-  width: 130px;
-  height: 81px;
+  width: 120px;
+  height: 75px;
   margin: 0 auto 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   border-radius: 8px;
   border: 1px solid rgba(15, 23, 42, 0.15);
 }
@@ -345,8 +451,8 @@ textarea.form-control {
 
 @media (max-width: 768px) {
   .college-logo-container {
-    width: 68px;
-    height: 42px;
+    width: 64px;
+    height: 40px;
     border-radius: 5px;
   }
   .brand-header,
@@ -359,13 +465,13 @@ textarea.form-control {
 
 @media (max-width: 480px) {
   .college-logo-container {
-    width: 54px;
-    height: 33.5px;
+    width: 52px;
+    height: 32px;
     border-radius: 4px;
   }
   .college-logo-container-lg {
-    width: 104px;
-    height: 65px;
+    width: 96px;
+    height: 60px;
   }
   .brand-header,
   .brand-logo-block,
@@ -374,6 +480,7 @@ textarea.form-control {
     gap: 8px;
   }
 }
+
 /* Professional SVG Icon Helpers */
 .svg-icon {
   display: inline-block;
