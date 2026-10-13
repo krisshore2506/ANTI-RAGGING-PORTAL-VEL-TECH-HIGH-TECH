@@ -88,13 +88,13 @@ class TestOTPSecurity(BaseSecurityTestCase):
 
         # Valid college domain with uppercase and surrounding whitespace
         resp = self.client.post("/send_otp", data={
-            "email": "  Student.Ragging@VelHighTech.com  ",
+            "email": "  VH13838@VelHighTech.com  ",
             "csrf_token": csrf
         }, follow_redirects=True)
 
         self.assertEqual(resp.status_code, 200)
         with self.client.session_transaction() as sess:
-            self.assertEqual(sess.get("email"), "student.ragging@velhightech.com")
+            self.assertEqual(sess.get("email"), "vh13838@velhightech.com")
         self.assertTrue(mock_send_email.called)
 
         # Unauthorized domain (e.g., gmail.com)
@@ -111,7 +111,7 @@ class TestOTPSecurity(BaseSecurityTestCase):
 
         # Send OTP
         self.client.post("/send_otp", data={
-            "email": "test@velhightech.com",
+            "email": "vh13838@velhightech.com",
             "csrf_token": csrf
         })
 
@@ -137,7 +137,7 @@ class TestOTPSecurity(BaseSecurityTestCase):
         csrf = self.get_csrf_token()
 
         self.client.post("/send_otp", data={
-            "email": "test@velhightech.com",
+            "email": "vh13838@velhightech.com",
             "csrf_token": csrf
         })
 
@@ -170,7 +170,7 @@ class TestOTPSecurity(BaseSecurityTestCase):
         csrf = self.get_csrf_token()
 
         self.client.post("/send_otp", data={
-            "email": "test@velhightech.com",
+            "email": "vh13838@velhightech.com",
             "csrf_token": csrf
         })
 
@@ -209,7 +209,7 @@ class TestCSRFProtection(BaseSecurityTestCase):
     def test_post_without_csrf_is_rejected(self):
         """Verify state-changing POST without CSRF token returns 403 Forbidden."""
         resp = self.client.post("/send_otp", data={
-            "email": "test@velhightech.com"
+            "email": "vh13838@velhightech.com"
         })
         self.assertEqual(resp.status_code, 403)
         self.assertIn(b"Security Verification Failed", resp.data)
@@ -218,7 +218,7 @@ class TestCSRFProtection(BaseSecurityTestCase):
         """Verify POST with invalid CSRF token returns 403 Forbidden."""
         self.get_csrf_token()
         resp = self.client.post("/send_otp", data={
-            "email": "test@velhightech.com",
+            "email": "vh13838@velhightech.com",
             "csrf_token": "tampered_invalid_token_12345"
         })
         self.assertEqual(resp.status_code, 403)
@@ -228,7 +228,7 @@ class TestCSRFProtection(BaseSecurityTestCase):
         """Verify POST with matching CSRF token is accepted."""
         csrf = self.get_csrf_token()
         resp = self.client.post("/send_otp", data={
-            "email": "test@velhightech.com",
+            "email": "vh13838@velhightech.com",
             "csrf_token": csrf
         }, follow_redirects=True)
         self.assertEqual(resp.status_code, 200)
@@ -276,7 +276,7 @@ class TestAuthenticationGuards(BaseSecurityTestCase):
             sess["verified"] = True
 
         self.client.post("/send_otp", data={
-            "email": "fresh_student@velhightech.com",
+            "email": "vh13838@velhightech.com",
             "csrf_token": csrf
         })
 
@@ -409,7 +409,7 @@ class TestSafeSMTPErrorHandling(BaseSecurityTestCase):
         csrf = self.get_csrf_token()
 
         resp = self.client.post("/send_otp", data={
-            "email": "student@velhightech.com",
+            "email": "vh13838@velhightech.com",
             "csrf_token": csrf
         }, follow_redirects=True)
 

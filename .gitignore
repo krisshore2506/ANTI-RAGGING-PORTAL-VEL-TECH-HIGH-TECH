@@ -1,17 +1,43 @@
+# Environments and Secrets
+.env
+.env.*
 venv/
+.venv/
+env/
+
+# Byte-compiled / optimized / cache
 __pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Flask Session & Runtime Instance
 flask_session/
 instance/
-.env
-*.pyc
-*.pyo
-*.pyd
+
+# Local Databases
+*.db
+*.sqlite
+*.sqlite3
 *.sqbpro
 complaints_backup_v1.db
 complaints.db
+
+# User Uploaded Evidence
+uploads/
+
+# Private Datasets & Complaint Records
+*.csv
+
+# Temporary and Backup Files
+*_backup*
+*.bak
+*.swp
+*.swo
+*~
+
+# IDE and OS Artifacts
 Thumbs.db
 .DS_Store
 .vscode/
 .idea/
-*.db
-*_backup.*

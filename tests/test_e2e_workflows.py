@@ -77,7 +77,7 @@ class TestStudentEndToEndJourney(BaseE2EWorkflowTestCase):
     @patch("grievai_app.send_otp_email")
     def test_full_student_lifecycle(self, mock_send_email):
         """Test full student lifecycle from landing to complaint submission and tracking."""
-        student_email = "student_journey@velhightech.com"
+        student_email = "vh10005@velhightech.com"
 
         # 1. Access Landing Page
         resp_home = self.client.get("/")
@@ -385,13 +385,13 @@ class TestSecurityNegativeScenarios(BaseE2EWorkflowTestCase):
         self.get_csrf_token()
 
         # Missing CSRF
-        resp_missing = self.client.post("/send_otp", data={"email": "student@velhightech.com"})
+        resp_missing = self.client.post("/send_otp", data={"email": "vh13838@velhightech.com"})
         self.assertEqual(resp_missing.status_code, 403)
         self.assertIn(b"CSRF Validation Error", resp_missing.data)
 
         # Tampered CSRF
         resp_tampered = self.client.post("/send_otp", data={
-            "email": "student@velhightech.com",
+            "email": "vh13838@velhightech.com",
             "csrf_token": "tampered-forged-csrf-token-12345678"
         })
         self.assertEqual(resp_tampered.status_code, 403)
@@ -402,7 +402,7 @@ class TestSecurityNegativeScenarios(BaseE2EWorkflowTestCase):
         """Verify OTP is strictly rejected when verified after 60 seconds."""
         csrf = self.get_csrf_token()
         self.client.post("/send_otp", data={
-            "email": "student_timer@velhightech.com",
+            "email": "vh10001@velhightech.com",
             "csrf_token": csrf
         })
         sent_otp = mock_send_email.call_args[0][1]
@@ -425,7 +425,7 @@ class TestSecurityNegativeScenarios(BaseE2EWorkflowTestCase):
         """Verify entering incorrect OTP is rejected."""
         csrf = self.get_csrf_token()
         self.client.post("/send_otp", data={
-            "email": "student_wrong@velhightech.com",
+            "email": "vh10002@velhightech.com",
             "csrf_token": csrf
         })
 
@@ -443,7 +443,7 @@ class TestSecurityNegativeScenarios(BaseE2EWorkflowTestCase):
         """Verify an OTP cannot be replayed after successful verification."""
         csrf = self.get_csrf_token()
         self.client.post("/send_otp", data={
-            "email": "student_replay@velhightech.com",
+            "email": "vh10003@velhightech.com",
             "csrf_token": csrf
         })
         sent_otp = mock_send_email.call_args[0][1]
@@ -467,7 +467,7 @@ class TestSecurityNegativeScenarios(BaseE2EWorkflowTestCase):
         """Verify rapid resend requests within 30 seconds are throttled."""
         csrf = self.get_csrf_token()
         self.client.post("/send_otp", data={
-            "email": "student_cooldown@velhightech.com",
+            "email": "vh10004@velhightech.com",
             "csrf_token": csrf
         })
 

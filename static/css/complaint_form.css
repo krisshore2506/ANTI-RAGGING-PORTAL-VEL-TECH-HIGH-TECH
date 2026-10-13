@@ -245,12 +245,12 @@
     }
 
     .dashboard-header .college-logo-container {
-        width: 48px !important;
-        height: 30px !important;
-        background: #000000 !important;
+        width: 70px !important;
+        height: 35px !important;
+        background: transparent !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-        border-radius: 3px !important;
+        border-radius: 0 !important;
         box-shadow: none !important;
     }
 
@@ -390,4 +390,20 @@
         text-decoration: none !important;
         color: inherit !important;
     }
+}
+
+/* ================= EVIDENCE UPLOAD & MEDIA RECORDER STYLES ================= */
+.evidence-dropzone:hover {
+    border-color: var(--primary) !important;
+    background: #f0fdf4 !important;
+}
+
+@keyframes pulse-dot {
+    0% { transform: scale(0.95); opacity: 0.8; }
+    50% { transform: scale(1.3); opacity: 1; }
+    100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.recording-pulse {
+    animation: pulse-dot 1.2s infinite ease-in-out;
 }

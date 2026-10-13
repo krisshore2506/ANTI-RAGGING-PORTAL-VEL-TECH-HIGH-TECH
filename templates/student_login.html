@@ -44,13 +44,15 @@
                     id="email-input"
                     class="form-control"
                     name="email"
-                    placeholder="name123@velhightech.com"
+                    placeholder="Enter your college email address"
+                    pattern="^[vV][hH][0-9]+@velhightech\.com$"
+                    title="Please enter your official college student email address."
                     required
                 >
             </div>
             
             <div class="domain-hint">
-                <span><svg class="svg-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Note: Access is limited only to <strong>@velhightech.com</strong> email addresses.</span>
+                <span><svg class="svg-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Access is restricted to authorized student accounts. Use your official college student email address to continue.</span>
             </div>
 
             <button type="submit" class="btn-primary" style="width: 100%;">Send Verification OTP</button>
@@ -59,5 +61,6 @@
         <a href="/" class="back-to-home"><svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Back to Home</a>
     </div>
 
+    {% include 'components/footer.html' %}
 </body>
 </html>
