@@ -228,3 +228,63 @@
     font-size: 16px;
   }
 }
+
+/* ==========================================================================
+   Admin Login Dedicated Logo Container (High Contrast on Dark Navy Card)
+   ========================================================================== */
+.college-logo-container.admin-logo-container,
+.admin-logo-container {
+  background: #ffffff !important;
+  border-radius: 8px;
+  padding: 8px 16px;
+  box-sizing: border-box;
+  width: 280px;
+  height: 132px;
+  margin: 0 auto 18px;
+  border: none;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-logo-container img,
+.admin-logo-container .college-logo {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain !important;
+  display: block;
+  background: transparent;
+}
+
+@media (max-width: 768px) {
+  .college-logo-container.admin-logo-container,
+  .admin-logo-container {
+    width: 250px;
+    height: 118px;
+    padding: 7px 14px;
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .college-logo-container.admin-logo-container,
+  .admin-logo-container {
+    width: 220px;
+    height: 104px;
+    padding: 6px 12px;
+    margin-bottom: 14px;
+  }
+}
+
+@media (max-width: 360px) {
+  .college-logo-container.admin-logo-container,
+  .admin-logo-container {
+    width: 190px;
+    height: 90px;
+    padding: 5px 8px;
+    margin-bottom: 12px;
+  }
+}
