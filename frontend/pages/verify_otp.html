@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OTP Verification - Anti-Ragging Portal</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body class="auth-body">
+
+    <div class="auth-card">
+        <div class="auth-logo-block">
+            <div class="college-logo-container college-logo-container-lg">
+            <img src="{{ url_for('static', filename='images/veltech_college_logo.png') }}" alt="Vel Tech High Tech College Logo" class="college-logo">
+        </div>
+            <h2>Verify Identity</h2>
+            <p>One-Time Password Verification</p>
+        </div>
+
+        <p style="font-size: 14px; text-align: center; color: var(--text-muted); margin-bottom: 25px;">
+            An OTP has been sent to your college email <br><strong>{{ email }}</strong>
+        </p>
+
+        <div class="otp-countdown-wrap">
+            <span id="countdown">Calculating timer...</span>
+        </div>
+
+        {% with messages = get_flashed_messages(category_filter=["error"]) %}
+          {% if messages %}
+            <div class="alert alert-error">
+                <span><svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>{{ messages[0] }}</span>
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        {% with messages = get_flashed_messages(category_filter=["success"]) %}
+          {% if messages %}
+            <div class="alert alert-success">
+                <span><svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>{{ messages[0] }}</span>
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="/verify_otp">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="form-group">
+                <label for="otp-input" style="text-align: center; display: block; font-weight: 600; margin-bottom: 10px;">
+                    Enter 6-Digit OTP
+                </label>
+                <input
+                    type="text"
+                    id="otp-input"
+                    class="form-control"
+                    name="otp"
+                    placeholder="xxxxxx"
+                    required
+                    maxlength="6"
+                    style="letter-spacing: 6px; text-align: center; font-size: 20px; font-weight: 700; color: var(--primary-dark);"
+                >
+            </div>
+
+            <button type="submit" class="btn-primary" style="width: 100%; margin-top: 10px;">
+                Verify & Access Portal
+            </button>
+        </form>
+
+        <div class="otp-actions">
+            <span>Didn't receive email?</span>
+            <form method="POST" action="{{ url_for('resend_otp') }}" id="resend-form" style="display: inline; margin: 0; padding: 0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" id="resend-btn" class="otp-resend-btn disabled" style="background: none; border: none; cursor: pointer; padding: 0; font: inherit; display: inline;">Resend OTP</button>
+            </form>
+        </div>
+
+        <a href="/student_login" class="back-to-home"><svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Back to Login</a>
+    </div>
+
+    <script>
+        let timeLeft = 60;
+        const countdownElement = document.getElementById("countdown");
+        const resendBtn = document.getElementById("resend-btn");
+
+        const resendForm = document.getElementById("resend-form");
+        resendForm.addEventListener('submit', function(e) {
+            if (resendBtn.classList.contains('disabled')) {
+                e.preventDefault();
+            }
+        });
+
+        const timer = setInterval(() => {
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                countdownElement.textContent = "OTP Expired";
+                countdownElement.style.backgroundColor = "#fee2e2";
+                countdownElement.style.color = "#ef4444";
+                resendBtn.classList.remove("disabled");
+            } else {
+                let minutes = Math.floor(timeLeft / 60);
+                let seconds = timeLeft % 60;
+                countdownElement.textContent = `OTP Expires in ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            }
+            timeLeft -= 1;
+        }, 1000);
+    </script>
+
+    {% include 'components/footer.html' %}
+</body>
+</html>
