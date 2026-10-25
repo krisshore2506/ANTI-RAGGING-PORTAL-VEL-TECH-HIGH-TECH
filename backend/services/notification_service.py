@@ -231,23 +231,33 @@ def _reminder_daemon_loop(app):
 
 def start_reminder_scheduler(app=None):
     global _scheduler_thread
-    if os.getenv("DISABLE_REMINDER_SCHEDULER", "False").lower() in ("true", "1"):
-        logger.info("Reminder scheduler explicitly disabled via DISABLE_REMINDER_SCHEDULER.")
+    if os.getenv("DISABLE_REMINDER_SCHEDULER", "False").lower() in ("true", "1", "yes"):
+        logger.info("Reminder scheduler explicitly disabled via DISABLE_REMINDER_SCHEDULER env var.")
         return
+
+    target_app = app
+    if target_app is None:
+        try:
+            target_app = current_app._get_current_object()
+        except Exception:
+            pass
+
+    if target_app is not None:
+        cfg_val = target_app.config.get("DISABLE_REMINDER_SCHEDULER")
+        if cfg_val is True or (isinstance(cfg_val, str) and cfg_val.lower() in ("true", "1", "yes")):
+            logger.info("Reminder scheduler explicitly disabled via DISABLE_REMINDER_SCHEDULER app config.")
+            return
 
     if _scheduler_thread is not None and _scheduler_thread.is_alive():
         return
 
-    if app is None:
-        try:
-            app = current_app._get_current_object()
-        except Exception:
-            return
+    if target_app is None:
+        return
 
     _scheduler_stop_event.clear()
     _scheduler_thread = threading.Thread(
         target=_reminder_daemon_loop,
-        args=(app,),
+        args=(target_app,),
         daemon=True,
         name="anti-ragging-reminder-scheduler"
     )

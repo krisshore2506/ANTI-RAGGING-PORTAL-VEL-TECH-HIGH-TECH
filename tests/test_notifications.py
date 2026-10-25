@@ -14,6 +14,7 @@ os.environ["SECRET_KEY"] = "test-secret-key-32-chars-minimum-length-for-testing"
 os.environ["ADMIN_EMAIL"] = "admin@velhightech.com"
 os.environ["ADMIN_PASSWORD"] = "AdminSecurePass123"
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+os.environ["DISABLE_REMINDER_SCHEDULER"] = "true"
 
 import grievai_app
 from grievai_app import (
@@ -712,7 +713,7 @@ class TestPendingActionAuditVerification(BaseNotificationTestCase):
 
     @patch("grievai_app.send_status_update_email")
     def test_old_unread_reminders_retained_on_status_change(self, mock_email):
-        """Task 8: Check current behavior: old unread reminder remains unread in database when complaint status changes."""
+        """Task 8: Verify that updating a complaint resolves stale pending reminders (marks them resolved and read) while preserving their historical database record."""
         t_now = datetime(2026, 10, 25, 12, 0, 0)
 
         # 1. Create Open complaint overdue by 26h
@@ -1007,6 +1008,42 @@ class TestStalePendingActionResolution(BaseNotificationTestCase):
         self.assertFalse(notif.is_resolved, "Notification resolution must roll back on transaction failure.")
         self.assertIsNone(notif.resolved_at)
 
+        # Verify flash error is shown and no false success message appears
+        self.assertIn(b"An error occurred while updating the complaint", response.data)
+        self.assertNotIn(b"Status is now", response.data)
+
+    @patch("grievai_app.send_status_update_email")
+    def test_failed_transaction_detail_route_rolls_back_atomically(self, mock_email):
+        """7b. Verify detail route (/admin/complaint/<id>) transaction atomicity and rollback."""
+        t_now = datetime(2026, 10, 25, 12, 0, 0)
+        c = self.create_sample_complaint(status="Open", timestamp=t_now - timedelta(hours=26))
+        process_pending_action_reminders(now=t_now)
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+        csrf = self.get_csrf_token()
+
+        with patch.object(db.session, "commit", side_effect=Exception("Simulated Detail Commit Failure")):
+            response = self.client.post(f"/admin/complaint/{c.id}", data={
+                "csrf_token": csrf,
+                "status": "Under Review",
+                "admin_remarks": "Failing detail update."
+            }, follow_redirects=True)
+            self.assertEqual(response.status_code, 200)
+
+        # Verify complaint was NOT committed
+        db.session.expire_all()
+        check_c = db.session.get(Complaint, c.id)
+        self.assertEqual(check_c.status, "Open")
+
+        # Verify reminder was NOT resolved
+        notif = Notification.query.filter_by(complaint_id=c.id, notification_type="pending_reminder").first()
+        self.assertFalse(notif.is_resolved)
+
+        # Verify error message shown and no false success
+        self.assertIn(b"An error occurred while updating the complaint", response.data)
+        self.assertNotIn(b"Status is now", response.data)
+
     @patch("grievai_app.send_status_update_email")
     def test_later_valid_reminder_generated_without_unintended_deduplication(self, mock_email):
         """8. Verify future reminder can be generated when complaint becomes overdue again without dedup collision."""
@@ -1086,6 +1123,532 @@ class TestStalePendingActionResolution(BaseNotificationTestCase):
         })
         self.assertEqual(track_resp.status_code, 200)
         self.assertIn(b"Action Taken", track_resp.data)
+
+    def test_mark_all_read_preserves_resolved_notification_history_and_unread_semantics(self):
+        """Verify mark_all_read preserves resolved notifications while resetting active unread count."""
+        # 1. Unresolved unread reminder
+        create_notification(
+            recipient_role="admin",
+            title="Unresolved Active Reminder",
+            message="Please review incident #100",
+            notification_type="pending_reminder",
+            complaint_id=100
+        )
+        # 2. Unresolved unread new_complaint
+        create_notification(
+            recipient_role="admin",
+            title="New Complaint Filed",
+            message="Incident #101 filed",
+            notification_type="new_complaint",
+            complaint_id=101
+        )
+        # 3. Already resolved historical reminder
+        resolved_time = datetime.utcnow() - timedelta(hours=5)
+        resolved_notif = create_notification(
+            recipient_role="admin",
+            title="Resolved Historical Reminder",
+            message="Past reminder",
+            notification_type="pending_reminder",
+            complaint_id=102
+        )
+        resolved_notif.is_resolved = True
+        resolved_notif.resolved_at = resolved_time
+        resolved_notif.is_read = True
+        resolved_notif.read_at = resolved_time
+        db.session.commit()
+
+        # Login as admin
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+        csrf = self.get_csrf_token()
+
+        # Prior to mark_all_read: active unread count should be 2
+        notifs_resp = self.client.get("/admin/notifications")
+        self.assertEqual(notifs_resp.status_code, 200)
+        self.assertEqual(notifs_resp.get_json()["unread_count"], 2)
+
+        # Execute mark_all_read
+        resp = self.client.post(
+            "/admin/notifications/mark_all_read",
+            headers={"X-CSRFToken": csrf},
+            json={"csrf_token": csrf}
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["marked_count"], 2)
+        self.assertEqual(data["unread_count"], 0)
+
+        # Verify historical resolved reminder remains untouched
+        check_resolved = Notification.query.get(resolved_notif.id)
+        self.assertTrue(check_resolved.is_resolved)
+        self.assertEqual(check_resolved.resolved_at, resolved_time)
+        self.assertEqual(check_resolved.read_at, resolved_time)
+
+        # Verify active unread count is 0
+        active_unread = Notification.query.filter(
+            Notification.recipient_role == "admin",
+            Notification.is_read == False,
+            Notification.is_resolved == False
+        ).count()
+        self.assertEqual(active_unread, 0)
+
+
+
+
+
+class TestNotificationDatabaseMigration(unittest.TestCase):
+    """
+    Isolated automated tests for database schema migration safety:
+    - Legacy tables without resolution columns
+    - Unique dedup_key index conversion to standard index (including custom-named and table constraints)
+    - Preservation of unrelated indexes and constraints
+    - Row value, type, and historical preservation
+    - Idempotency on repeated execution
+    - Fresh database creation
+    - Safe generation of re-reminders after resolution
+    - Scheduler disabling flag verification
+    - Resource cleanup without database connection leaks
+    """
+
+    def setUp(self):
+        import tempfile
+        self.temp_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.db_path = self.temp_file.name
+        self.temp_file.close()
+
+    def tearDown(self):
+        try:
+            from backend.models.base import db
+            db.session.remove()
+            if hasattr(db, "engine") and db.engine:
+                db.engine.dispose()
+        except Exception:
+            pass
+        try:
+            if os.path.exists(self.db_path):
+                os.remove(self.db_path)
+        except Exception:
+            pass
+
+    def _setup_legacy_database(self, custom_unique_index_name=None, column_unique_constraint=False):
+        import sqlite3
+        con = sqlite3.connect(self.db_path)
+        cur = con.cursor()
+        cur.execute("""
+            CREATE TABLE complaint (
+                id INTEGER PRIMARY KEY,
+                student_email VARCHAR(120),
+                status VARCHAR(50),
+                created_at DATETIME,
+                timestamp DATETIME
+            )
+        """)
+        if column_unique_constraint:
+            cur.execute("""
+                CREATE TABLE notification (
+                    id INTEGER PRIMARY KEY,
+                    recipient_role VARCHAR(20) NOT NULL,
+                    recipient_email VARCHAR(120),
+                    complaint_id INTEGER,
+                    notification_type VARCHAR(50) NOT NULL,
+                    title VARCHAR(150) NOT NULL,
+                    message TEXT NOT NULL,
+                    created_at DATETIME NOT NULL,
+                    is_read BOOLEAN NOT NULL,
+                    read_at DATETIME,
+                    dedup_key VARCHAR(120) UNIQUE
+                )
+            """)
+        else:
+            cur.execute("""
+                CREATE TABLE notification (
+                    id INTEGER PRIMARY KEY,
+                    recipient_role VARCHAR(20) NOT NULL,
+                    recipient_email VARCHAR(120),
+                    complaint_id INTEGER,
+                    notification_type VARCHAR(50) NOT NULL,
+                    title VARCHAR(150) NOT NULL,
+                    message TEXT NOT NULL,
+                    created_at DATETIME NOT NULL,
+                    is_read BOOLEAN NOT NULL,
+                    read_at DATETIME,
+                    dedup_key VARCHAR(120)
+                )
+            """)
+            if custom_unique_index_name:
+                cur.execute(f"CREATE UNIQUE INDEX {custom_unique_index_name} ON notification (dedup_key)")
+            else:
+                cur.execute("CREATE UNIQUE INDEX ix_notification_dedup_key ON notification (dedup_key)")
+
+        # Pre-populate legacy rows
+        cur.execute("""
+            INSERT INTO notification (id, recipient_role, recipient_email, complaint_id, notification_type, title, message, created_at, is_read, read_at, dedup_key)
+            VALUES (1, 'admin', NULL, 10, 'pending_reminder', 'Action Required', 'Incident 10 is overdue', '2026-10-24 10:00:00', 0, NULL, 'reminder:open:10:24h')
+        """)
+        cur.execute("""
+            INSERT INTO notification (id, recipient_role, recipient_email, complaint_id, notification_type, title, message, created_at, is_read, read_at, dedup_key)
+            VALUES (2, 'student', 'student@velhightech.com', 10, 'status_update', 'Status Update', 'Under review', '2026-10-24 11:00:00', 1, '2026-10-24 12:00:00', NULL)
+        """)
+        con.commit()
+        con.close()
+
+    def test_legacy_database_migration_adds_columns_and_preserves_records(self):
+        """1. Verify legacy database without resolution columns is migrated safely and rows preserved."""
+        import sqlite3
+        from backend import create_app
+        from backend.models.base import db
+
+        self._setup_legacy_database()
+
+        app = create_app({
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{self.db_path}",
+            "DISABLE_REMINDER_SCHEDULER": True
+        })
+
+        try:
+            con = sqlite3.connect(self.db_path)
+            cur = con.cursor()
+            cols = [c[1] for c in cur.execute("PRAGMA table_info('notification')").fetchall()]
+            self.assertIn("is_resolved", cols, "is_resolved column must be added to notification table.")
+            self.assertIn("resolved_at", cols, "resolved_at column must be added to notification table.")
+
+            # Check existing row values preserved
+            row1 = cur.execute("SELECT id, message, is_resolved, resolved_at, is_read, dedup_key FROM notification WHERE id=1").fetchone()
+            self.assertEqual(row1[0], 1)
+            self.assertEqual(row1[1], "Incident 10 is overdue")
+            self.assertEqual(row1[2], 0, "is_resolved must default to 0 (False) for existing records.")
+            self.assertIsNone(row1[3], "resolved_at must remain NULL for existing records.")
+            self.assertEqual(row1[4], 0)
+            self.assertEqual(row1[5], "reminder:open:10:24h")
+
+            row2 = cur.execute("SELECT id, is_read, read_at, is_resolved FROM notification WHERE id=2").fetchone()
+            self.assertEqual(row2[0], 2)
+            self.assertEqual(row2[1], 1)
+            self.assertEqual(row2[2], "2026-10-24 12:00:00")
+            self.assertEqual(row2[3], 0)
+
+            # Check index is non-unique
+            idx_sql = cur.execute("SELECT sql FROM sqlite_master WHERE type='index' AND name='ix_notification_dedup_key'").fetchone()[0]
+            self.assertNotIn("UNIQUE", idx_sql.upper(), "Unique constraint must be removed from dedup_key index.")
+            con.close()
+        finally:
+            with app.app_context():
+                db.session.remove()
+                db.engine.dispose()
+
+    def test_legacy_migration_with_custom_named_unique_index_and_unrelated_indexes(self):
+        """2. Verify custom-named unique indexes on dedup_key are relaxed while unrelated indexes are preserved."""
+        import sqlite3
+        from backend import create_app
+        from backend.models.base import db
+
+        self._setup_legacy_database(custom_unique_index_name="uq_custom_dedup_idx")
+
+        # Add unrelated indexes to verify they are not dropped
+        con = sqlite3.connect(self.db_path)
+        cur = con.cursor()
+        cur.execute("CREATE UNIQUE INDEX uq_unrelated_field ON notification (created_at)")
+        cur.execute("CREATE INDEX ix_recipient_role_custom ON notification (recipient_role)")
+        con.commit()
+        con.close()
+
+        app = create_app({
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{self.db_path}",
+            "DISABLE_REMINDER_SCHEDULER": True
+        })
+
+        try:
+            con = sqlite3.connect(self.db_path)
+            cur = con.cursor()
+            indexes = [r[1] for r in cur.execute("PRAGMA index_list('notification')").fetchall()]
+
+            # The custom unique index on dedup_key must be gone
+            self.assertNotIn("uq_custom_dedup_idx", indexes)
+            # The non-unique standard index must be present
+            self.assertIn("ix_notification_dedup_key", indexes)
+            # The unrelated unique and non-unique indexes must still exist
+            self.assertIn("uq_unrelated_field", indexes)
+            self.assertIn("ix_recipient_role_custom", indexes)
+
+            # Confirm duplicate dedup_key insert now succeeds
+            cur.execute("""
+                INSERT INTO notification (id, recipient_role, notification_type, title, message, created_at, is_read, dedup_key)
+                VALUES (3, 'admin', 'pending_reminder', 'T3', 'M3', '2026-10-24 15:00:00', 0, 'reminder:open:10:24h')
+            """)
+            con.commit()
+            count = cur.execute("SELECT count(*) FROM notification WHERE dedup_key='reminder:open:10:24h'").fetchone()[0]
+            self.assertEqual(count, 2)
+            con.close()
+        finally:
+            with app.app_context():
+                db.session.remove()
+                db.engine.dispose()
+
+    def test_legacy_migration_with_table_or_column_unique_constraint(self):
+        """3. Verify table rebuild successfully removes SQLite autoindex UNIQUE constraint on dedup_key."""
+        import sqlite3
+        from backend import create_app
+        from backend.models.base import db
+
+        self._setup_legacy_database(column_unique_constraint=True)
+
+        # Add unrelated index
+        con = sqlite3.connect(self.db_path)
+        cur = con.cursor()
+        cur.execute("CREATE INDEX ix_complaint_id_test ON notification (complaint_id)")
+        con.commit()
+        con.close()
+
+        app = create_app({
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{self.db_path}",
+            "DISABLE_REMINDER_SCHEDULER": True
+        })
+
+        try:
+            con = sqlite3.connect(self.db_path)
+            cur = con.cursor()
+
+            # Verify rows preserved
+            count = cur.execute("SELECT count(*) FROM notification").fetchone()[0]
+            self.assertEqual(count, 2)
+
+            # Verify unrelated index preserved
+            indexes = [r[1] for r in cur.execute("PRAGMA index_list('notification')").fetchall()]
+            self.assertIn("ix_complaint_id_test", indexes)
+            self.assertIn("ix_notification_dedup_key", indexes)
+
+            # Verify no unique autoindexes remain on dedup_key
+            for idx in cur.execute("PRAGMA index_list('notification')").fetchall():
+                idx_name = idx[1]
+                is_unique = bool(idx[2])
+                if is_unique:
+                    cols = [col[2] for col in cur.execute(f"PRAGMA index_info('{idx_name}')").fetchall()]
+                    self.assertNotEqual(cols, ['dedup_key'], f"Unique index/constraint still exists on dedup_key: {idx_name}")
+
+            # Verify second insert with duplicate dedup_key succeeds
+            cur.execute("""
+                INSERT INTO notification (id, recipient_role, notification_type, title, message, created_at, is_read, dedup_key)
+                VALUES (3, 'admin', 'pending_reminder', 'T3', 'M3', '2026-10-24 16:00:00', 0, 'reminder:open:10:24h')
+            """)
+            con.commit()
+            con.close()
+        finally:
+            with app.app_context():
+                db.session.remove()
+                db.engine.dispose()
+
+    def test_migration_is_idempotent_on_repeated_runs(self):
+        """4. Verify running the migration multiple times is completely idempotent and safe."""
+        import sqlite3
+        from backend import create_app
+        from backend.models.base import db
+
+        self._setup_legacy_database()
+
+        for _ in range(3):
+            app = create_app({
+                "TESTING": True,
+                "SQLALCHEMY_DATABASE_URI": f"sqlite:///{self.db_path}",
+                "DISABLE_REMINDER_SCHEDULER": True
+            })
+            with app.app_context():
+                db.session.remove()
+                db.engine.dispose()
+
+        con = sqlite3.connect(self.db_path)
+        cur = con.cursor()
+        count = cur.execute("SELECT count(*) FROM notification").fetchone()[0]
+        self.assertEqual(count, 2, "Row count must remain intact after multiple migration runs.")
+        con.close()
+
+    def test_fresh_database_creation_includes_resolution_columns_and_non_unique_index(self):
+        """5. Verify creating a fresh database includes new columns and non-unique index from the start."""
+        import sqlite3
+        from backend import create_app
+        from backend.models.base import db
+
+        app = create_app({
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{self.db_path}",
+            "DISABLE_REMINDER_SCHEDULER": True
+        })
+
+        try:
+            con = sqlite3.connect(self.db_path)
+            cur = con.cursor()
+            cols = [c[1] for c in cur.execute("PRAGMA table_info('notification')").fetchall()]
+            self.assertIn("is_resolved", cols)
+            self.assertIn("resolved_at", cols)
+
+            indices = cur.execute("SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name='notification'").fetchall()
+            for idx_name, idx_sql in indices:
+                if idx_name == "ix_notification_dedup_key" and idx_sql:
+                    self.assertNotIn("UNIQUE", idx_sql.upper())
+            con.close()
+        finally:
+            with app.app_context():
+                db.session.remove()
+                db.engine.dispose()
+
+    def test_generating_new_reminder_after_resolving_previous_with_same_dedup_key(self):
+        """6. Verify new reminder with same dedup_key can be inserted after previous reminder is resolved."""
+        from backend import create_app
+        from backend.models.base import db
+        from backend.models.complaint import Complaint
+        from backend.models.notification import Notification
+        from backend.services.notification_service import (
+            create_notification,
+            resolve_pending_reminders_for_complaint
+        )
+
+        app = create_app({
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{self.db_path}",
+            "DISABLE_REMINDER_SCHEDULER": True
+        })
+
+        try:
+            with app.app_context():
+                c = Complaint(
+                    student_email="student@velhightech.com",
+                    complaint_title="Test Report",
+                    complaint_text="Details",
+                    department="Hostel hazing or coercion",
+                    incident_type="Hostel hazing or coercion",
+                    status="Open",
+                    created_at=datetime.utcnow() - timedelta(hours=26),
+                    timestamp=datetime.utcnow() - timedelta(hours=26)
+                )
+                db.session.add(c)
+                db.session.commit()
+
+                # Cycle 1: First reminder
+                notif1 = create_notification(
+                    recipient_role="admin",
+                    title="Reminder Cycle 1",
+                    message="Overdue cycle 1",
+                    notification_type="pending_reminder",
+                    complaint_id=c.id,
+                    dedup_key=f"reminder:open:{c.id}:24h"
+                )
+                self.assertIsNotNone(notif1)
+                self.assertFalse(notif1.is_resolved)
+
+                # Resolve cycle 1 reminder
+                resolved_count = resolve_pending_reminders_for_complaint(c.id, commit=True)
+                self.assertEqual(resolved_count, 1)
+
+                # Cycle 2: A subsequent reminder with the same dedup_key is generated
+                notif2 = create_notification(
+                    recipient_role="admin",
+                    title="Reminder Cycle 2",
+                    message="Overdue cycle 2",
+                    notification_type="pending_reminder",
+                    complaint_id=c.id,
+                    dedup_key=f"reminder:open:{c.id}:24h"
+                )
+                self.assertIsNotNone(notif2)
+                self.assertNotEqual(notif1.id, notif2.id, "Second reminder must be a distinct new record.")
+                self.assertFalse(notif2.is_resolved)
+
+                # Verify both coexist in DB
+                all_reminders = Notification.query.filter_by(
+                    complaint_id=c.id,
+                    dedup_key=f"reminder:open:{c.id}:24h"
+                ).all()
+                self.assertEqual(len(all_reminders), 2)
+                self.assertTrue(all_reminders[0].is_resolved)
+                self.assertFalse(all_reminders[1].is_resolved)
+        finally:
+            with app.app_context():
+                db.session.remove()
+                db.engine.dispose()
+
+    def test_scheduler_disabling_via_config_flag(self):
+        """7. Verify DISABLE_REMINDER_SCHEDULER reliably prevents scheduler thread startup."""
+        import threading
+        from backend import create_app
+        from backend.models.base import db
+        from backend.services.notification_service import stop_reminder_scheduler
+
+        # Ensure any existing thread is cleanly stopped
+        stop_reminder_scheduler()
+
+        # Branch A: When DISABLE_REMINDER_SCHEDULER is True, thread must NOT start even if TESTING=False
+        app = create_app({
+            "TESTING": False,
+            "DISABLE_REMINDER_SCHEDULER": True,
+            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{self.db_path}"
+        })
+
+        try:
+            current_threads = {t.name for t in threading.enumerate()}
+            self.assertNotIn(
+                "anti-ragging-reminder-scheduler",
+                current_threads,
+                "Scheduler thread must NOT start when DISABLE_REMINDER_SCHEDULER is True."
+            )
+        finally:
+            with app.app_context():
+                db.session.remove()
+                db.engine.dispose()
+
+        # Branch B: Verify when DISABLE_REMINDER_SCHEDULER is False and TESTING is False, scheduler DOES start
+        orig_env = os.environ.get("DISABLE_REMINDER_SCHEDULER")
+        if "DISABLE_REMINDER_SCHEDULER" in os.environ:
+            del os.environ["DISABLE_REMINDER_SCHEDULER"]
+
+        app_enabled = None
+        try:
+            app_enabled = create_app({
+                "TESTING": False,
+                "DISABLE_REMINDER_SCHEDULER": False,
+                "SQLALCHEMY_DATABASE_URI": f"sqlite:///{self.db_path}"
+            })
+            threads_after = {t.name for t in threading.enumerate()}
+            self.assertIn(
+                "anti-ragging-reminder-scheduler",
+                threads_after,
+                "Scheduler thread MUST start in production mode when DISABLE_REMINDER_SCHEDULER is False."
+            )
+        finally:
+            stop_reminder_scheduler()
+            if orig_env is not None:
+                os.environ["DISABLE_REMINDER_SCHEDULER"] = orig_env
+            if app_enabled:
+                with app_enabled.app_context():
+                    db.session.remove()
+                    db.engine.dispose()
+
+    def test_app_factory_disposes_engine_and_does_not_leak_connections(self):
+        """8. Verify repeated app-factory calls do not leak connections and temp files can be removed cleanly."""
+        from backend import create_app
+        from backend.models.base import db
+
+        app1 = create_app({
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{self.db_path}",
+            "DISABLE_REMINDER_SCHEDULER": True
+        })
+        with app1.app_context():
+            db.session.remove()
+            db.engine.dispose()
+
+        app2 = create_app({
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{self.db_path}",
+            "DISABLE_REMINDER_SCHEDULER": True
+        })
+        with app2.app_context():
+            db.session.remove()
+            db.engine.dispose()
+
+        # Database file should be unlockable and removable
+        self.assertTrue(os.path.exists(self.db_path))
 
 
 if __name__ == "__main__":

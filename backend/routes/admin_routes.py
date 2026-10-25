@@ -56,16 +56,17 @@ def admin():
                 "Assigned": "Under Review"
             }
             target_status = status_map.get(new_status, new_status)
-            if target_status in valid_statuses:
-                complaint.status = target_status
-
-            complaint.admin_remarks = remarks
-            complaint.timestamp = datetime.utcnow()
-
-            # Atomically resolve stale pending reminders for this complaint
-            resolve_pending_reminders_for_complaint(complaint.id, resolved_at=complaint.timestamp, commit=False)
 
             try:
+                if target_status in valid_statuses:
+                    complaint.status = target_status
+
+                complaint.admin_remarks = remarks
+                complaint.timestamp = datetime.utcnow()
+
+                # Atomically resolve stale pending reminders for this complaint
+                resolve_pending_reminders_for_complaint(complaint.id, resolved_at=complaint.timestamp, commit=False)
+
                 db.session.commit()
             except Exception as commit_err:
                 db.session.rollback()
@@ -179,15 +180,16 @@ def admin_complaint_details(complaint_id):
             "Assigned": "Under Review"
         }
         target_status = status_map.get(new_status, new_status)
-        if target_status in valid_statuses:
-            complaint.status = target_status
-        complaint.admin_remarks = remarks
-        complaint.timestamp = datetime.utcnow()
-
-        # Atomically resolve stale pending reminders for this complaint
-        resolve_pending_reminders_for_complaint(complaint.id, resolved_at=complaint.timestamp, commit=False)
 
         try:
+            if target_status in valid_statuses:
+                complaint.status = target_status
+            complaint.admin_remarks = remarks
+            complaint.timestamp = datetime.utcnow()
+
+            # Atomically resolve stale pending reminders for this complaint
+            resolve_pending_reminders_for_complaint(complaint.id, resolved_at=complaint.timestamp, commit=False)
+
             db.session.commit()
         except Exception as commit_err:
             db.session.rollback()
@@ -292,17 +294,23 @@ def admin_mark_notification_read(notification_id):
     if not notif:
         return jsonify({"error": "Notification not found"}), 404
 
-    notif.is_read = True
-    notif.read_at = datetime.utcnow()
-    db.session.commit()
+    try:
+        notif.is_read = True
+        if not notif.read_at:
+            notif.read_at = datetime.utcnow()
+        db.session.commit()
 
-    unread_count = Notification.query.filter(
-        Notification.recipient_role == "admin",
-        Notification.is_read == False,
-        Notification.is_resolved == False
-    ).count()
+        unread_count = Notification.query.filter(
+            Notification.recipient_role == "admin",
+            Notification.is_read == False,
+            Notification.is_resolved == False
+        ).count()
 
-    return jsonify({"success": True, "id": notif.id, "unread_count": unread_count})
+        return jsonify({"success": True, "id": notif.id, "unread_count": unread_count})
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Error marking notification %s as read: %s", notification_id, str(e))
+        return jsonify({"error": "Failed to update notification"}), 500
 
 
 @admin_bp.route("/admin/notifications/mark_all_read", methods=["POST"], endpoint="admin_mark_all_notifications_read")
@@ -310,18 +318,35 @@ def admin_mark_all_notifications_read():
     if not session.get("admin_logged_in"):
         return jsonify({"error": "Unauthorized"}), 401
 
-    unread_notifs = Notification.query.filter_by(
-        recipient_role="admin",
-        is_read=False
-    ).all()
+    try:
+        unread_notifs = Notification.query.filter_by(
+            recipient_role="admin",
+            is_read=False
+        ).all()
 
-    now = datetime.utcnow()
-    for n in unread_notifs:
-        n.is_read = True
-        n.read_at = now
+        now = datetime.utcnow()
+        for n in unread_notifs:
+            n.is_read = True
+            if not n.read_at:
+                n.read_at = now
 
-    db.session.commit()
-    return jsonify({"success": True, "marked_count": len(unread_notifs), "unread_count": 0})
+        db.session.commit()
+
+        unread_count = Notification.query.filter(
+            Notification.recipient_role == "admin",
+            Notification.is_read == False,
+            Notification.is_resolved == False
+        ).count()
+
+        return jsonify({
+            "success": True,
+            "marked_count": len(unread_notifs),
+            "unread_count": unread_count
+        })
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Error marking all admin notifications as read: %s", str(e))
+        return jsonify({"error": "Failed to mark notifications as read"}), 500
 
 
 @admin_bp.route("/admin/pending_queue", methods=["GET"], endpoint="admin_pending_queue")
