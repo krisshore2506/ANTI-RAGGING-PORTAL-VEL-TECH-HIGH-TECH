@@ -14,7 +14,9 @@ class Notification(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
     is_read = db.Column(db.Boolean, default=False, nullable=False, index=True)
     read_at = db.Column(db.DateTime, nullable=True)
-    dedup_key = db.Column(db.String(120), nullable=True, unique=True, index=True)
+    is_resolved = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    resolved_at = db.Column(db.DateTime, nullable=True, index=True)
+    dedup_key = db.Column(db.String(120), nullable=True, index=True)
 
     def to_dict(self):
         return {
@@ -28,5 +30,7 @@ class Notification(db.Model):
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M") if self.created_at else None,
             "is_read": self.is_read,
             "read_at": self.read_at.strftime("%Y-%m-%d %H:%M") if self.read_at else None,
+            "is_resolved": self.is_resolved,
+            "resolved_at": self.resolved_at.strftime("%Y-%m-%d %H:%M") if self.resolved_at else None,
             "dedup_key": self.dedup_key
         }

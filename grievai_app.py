@@ -82,6 +82,7 @@ from backend.services.notification_service import (
     get_admin_pending_action_queue,
     process_pending_action_reminders,
     check_pending_action_reminders,
+    resolve_pending_reminders_for_complaint,
     start_reminder_scheduler,
     stop_reminder_scheduler
 )

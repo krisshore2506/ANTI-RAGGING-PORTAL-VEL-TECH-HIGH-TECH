@@ -17,6 +17,7 @@ os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
 import grievai_app
 from grievai_app import (
+    resolve_pending_reminders_for_complaint,
     app, db, Complaint, Notification,
     create_notification, process_pending_action_reminders, get_admin_pending_action_queue,
     REMINDER_OPEN_HOURS, REMINDER_IN_PROGRESS_HOURS,
@@ -460,6 +461,631 @@ class TestNotificationSecurityAndCSRF(BaseNotificationTestCase):
             is_read=False
         ).count()
         self.assertEqual(admin_unread, 0)
+
+
+
+
+class TestPendingActionAuditVerification(BaseNotificationTestCase):
+    """
+    Comprehensive verification of pending-action reminder thresholds, boundary conditions,
+    scheduler idempotency, status filtering, and audit trail retention.
+    """
+
+    def test_24h_open_boundary_thresholds(self):
+        """Task 3: Test 24-hour boundary for Open complaints with controlled timestamps."""
+        t_now = datetime(2026, 10, 25, 12, 0, 0)
+
+        # 1. Just below threshold: 23 hours 58 minutes (23.967h)
+        c_sub = self.create_sample_complaint(
+            email="sub24@velhightech.com",
+            status="Open",
+            timestamp=t_now - timedelta(hours=23, minutes=58)
+        )
+
+        # 2. Just above threshold: 24 hours 2 minutes (24.033h)
+        c_super = self.create_sample_complaint(
+            email="super24@velhightech.com",
+            status="Open",
+            timestamp=t_now - timedelta(hours=24, minutes=2)
+        )
+
+        # Check queue detection
+        queue = get_admin_pending_action_queue(now=t_now)
+        queue_ids = [item["id"] for item in queue]
+
+        self.assertNotIn(c_sub.id, queue_ids, "Sub-24h Open complaint must not appear in pending queue.")
+        self.assertIn(c_super.id, queue_ids, "Super-24h Open complaint must appear in pending queue.")
+
+        item = next(it for it in queue if it["id"] == c_super.id)
+        self.assertEqual(item["elapsed_hours"], 24)
+        self.assertEqual(item["threshold_hours"], 24)
+        self.assertEqual(item["urgency"], "Medium")
+
+        # Check reminder generation
+        count = process_pending_action_reminders(now=t_now)
+        self.assertEqual(count, 1, "Only the super-24h complaint should trigger a reminder.")
+
+        notif_sub = Notification.query.filter_by(complaint_id=c_sub.id, recipient_role="admin").first()
+        self.assertIsNone(notif_sub, "Sub-24h complaint must not have generated an admin reminder.")
+
+        notif_super = Notification.query.filter_by(complaint_id=c_super.id, recipient_role="admin").first()
+        self.assertIsNotNone(notif_super, "Super-24h complaint must have generated an admin reminder.")
+        self.assertEqual(notif_super.dedup_key, f"reminder:open:{c_super.id}:24h")
+        self.assertEqual(notif_super.notification_type, "pending_reminder")
+        self.assertFalse(notif_super.is_read)
+        self.assertIn("Action Required", notif_super.title)
+
+    def test_72h_under_review_boundary_thresholds(self):
+        """Task 3: Test 72-hour boundary for Under Review complaints with controlled timestamps."""
+        t_now = datetime(2026, 10, 25, 12, 0, 0)
+
+        # 1. Just below threshold: 71 hours 55 minutes (71.917h)
+        c_sub = self.create_sample_complaint(
+            email="sub72@velhightech.com",
+            status="Under Review",
+            timestamp=t_now - timedelta(hours=71, minutes=55)
+        )
+
+        # 2. Just above threshold: 72 hours 5 minutes (72.083h)
+        c_super = self.create_sample_complaint(
+            email="super72@velhightech.com",
+            status="Under Review",
+            timestamp=t_now - timedelta(hours=72, minutes=5)
+        )
+
+        # Check queue detection
+        queue = get_admin_pending_action_queue(now=t_now)
+        queue_ids = [item["id"] for item in queue]
+
+        self.assertNotIn(c_sub.id, queue_ids, "Sub-72h Under Review complaint must not appear in pending queue.")
+        self.assertIn(c_super.id, queue_ids, "Super-72h Under Review complaint must appear in pending queue.")
+
+        item = next(it for it in queue if it["id"] == c_super.id)
+        self.assertEqual(item["elapsed_hours"], 72)
+        self.assertEqual(item["threshold_hours"], 72)
+        self.assertEqual(item["urgency"], "Medium")
+
+        # Check reminder generation
+        count = process_pending_action_reminders(now=t_now)
+        self.assertEqual(count, 1, "Only the super-72h Under Review complaint should trigger a reminder.")
+
+        notif_sub = Notification.query.filter_by(complaint_id=c_sub.id, recipient_role="admin").first()
+        self.assertIsNone(notif_sub, "Sub-72h complaint must not have generated an admin reminder.")
+
+        notif_super = Notification.query.filter_by(complaint_id=c_super.id, recipient_role="admin").first()
+        self.assertIsNotNone(notif_super, "Super-72h complaint must have generated an admin reminder.")
+        self.assertEqual(notif_super.dedup_key, f"reminder:in_progress:{c_super.id}:72h")
+        self.assertEqual(notif_super.notification_type, "pending_reminder")
+        self.assertFalse(notif_super.is_read)
+        self.assertIn("Awaiting Follow-up", notif_super.title)
+
+    def test_repeated_sweeps_and_multi_interval_escalation(self):
+        """Task 4: Test that repeated scheduler sweeps are idempotent, and advance to next interval when threshold reached."""
+        t_0 = datetime(2026, 10, 20, 10, 0, 0)
+        c = self.create_sample_complaint(
+            email="escalation@velhightech.com",
+            status="Open",
+            timestamp=t_0
+        )
+
+        # Sweep 1 at t_0 + 26h (within first 24h bucket)
+        t_sweep1 = t_0 + timedelta(hours=26)
+        count1 = process_pending_action_reminders(now=t_sweep1)
+        self.assertEqual(count1, 1)
+
+        notifs = Notification.query.filter_by(complaint_id=c.id, recipient_role="admin").all()
+        self.assertEqual(len(notifs), 1)
+        self.assertEqual(notifs[0].dedup_key, f"reminder:open:{c.id}:24h")
+
+        # Sweeps 2 & 3 at t_0 + 27h and t_0 + 35h (still within 24h-47h window)
+        count2 = process_pending_action_reminders(now=t_0 + timedelta(hours=27))
+        count3 = process_pending_action_reminders(now=t_0 + timedelta(hours=35))
+        self.assertEqual(count2, 0, "Repeated sweep in same window must not create duplicate.")
+        self.assertEqual(count3, 0, "Repeated sweep in same window must not create duplicate.")
+
+        notifs_repeat = Notification.query.filter_by(complaint_id=c.id, recipient_role="admin").all()
+        self.assertEqual(len(notifs_repeat), 1, "Duplicate notifications were erroneously created.")
+
+        # Sweep 4 at t_0 + 50h (exceeds 48h boundary -> second escalation interval)
+        t_sweep4 = t_0 + timedelta(hours=50)
+        count4 = process_pending_action_reminders(now=t_sweep4)
+        self.assertEqual(count4, 1, "Advancing past 48h bucket must generate exactly 1 escalation reminder.")
+
+        notifs_escalated = Notification.query.filter_by(complaint_id=c.id, recipient_role="admin").order_by(Notification.id.asc()).all()
+        self.assertEqual(len(notifs_escalated), 2)
+        self.assertEqual(notifs_escalated[0].dedup_key, f"reminder:open:{c.id}:24h")
+        self.assertEqual(notifs_escalated[1].dedup_key, f"reminder:open:{c.id}:48h")
+
+        # Sweep 5 at t_0 + 51h (still in 48h bucket)
+        count5 = process_pending_action_reminders(now=t_0 + timedelta(hours=51))
+        self.assertEqual(count5, 0, "Repeated sweep in 48h bucket must not duplicate.")
+
+    def test_closed_and_resolved_complaints_receive_no_reminders(self):
+        """Task 5: Test that Closed and Resolved complaints strictly do not receive reminders or enter pending queue."""
+        t_now = datetime(2026, 10, 25, 12, 0, 0)
+
+        c_closed = self.create_sample_complaint(
+            email="closed@velhightech.com",
+            status="Closed",
+            timestamp=t_now - timedelta(hours=150)
+        )
+        c_resolved = self.create_sample_complaint(
+            email="resolved@velhightech.com",
+            status="Resolved",
+            timestamp=t_now - timedelta(hours=200)
+        )
+
+        queue = get_admin_pending_action_queue(now=t_now)
+        queue_ids = [item["id"] for item in queue]
+        self.assertNotIn(c_closed.id, queue_ids, "Closed complaint must not be in pending queue.")
+        self.assertNotIn(c_resolved.id, queue_ids, "Resolved complaint must not be in pending queue.")
+
+        count = process_pending_action_reminders(now=t_now)
+        self.assertEqual(count, 0, "No reminders should be generated for Closed/Resolved complaints.")
+
+        admin_notifs = Notification.query.filter_by(recipient_role="admin").all()
+        self.assertEqual(len(admin_notifs), 0, "No notifications should be persisted for Closed/Resolved complaints.")
+
+    def test_action_taken_complaints_receive_no_reminders(self):
+        """Task 6: Verify current behavior for 'Action Taken' complaints (they receive 0 reminders and do not enter pending queue)."""
+        t_now = datetime(2026, 10, 25, 12, 0, 0)
+
+        c_action_taken = self.create_sample_complaint(
+            email="action_taken@velhightech.com",
+            status="Action Taken",
+            timestamp=t_now - timedelta(hours=120)
+        )
+
+        # 1. Verify queue behavior:
+        queue = get_admin_pending_action_queue(now=t_now)
+        queue_ids = [item["id"] for item in queue]
+        self.assertNotIn(c_action_taken.id, queue_ids, "'Action Taken' complaint must not appear in pending queue.")
+
+        # 2. Verify reminder processor behavior:
+        count = process_pending_action_reminders(now=t_now)
+        self.assertEqual(count, 0, "'Action Taken' complaint must not trigger reminders.")
+
+        notifs = Notification.query.filter_by(complaint_id=c_action_taken.id, recipient_role="admin").all()
+        self.assertEqual(len(notifs), 0, "No admin notifications should exist for 'Action Taken' complaint.")
+
+    def test_pending_action_queue_and_notifications_agreement(self):
+        """Task 7: Test that the pending-action queue and reminder notification generation strictly agree on overdue complaints."""
+        t_now = datetime(2026, 10, 25, 12, 0, 0)
+
+        # Overdue Open (30h >= 24h)
+        c_open_overdue = self.create_sample_complaint(
+            email="open_od@velhightech.com",
+            status="Open",
+            timestamp=t_now - timedelta(hours=30)
+        )
+        # Non-overdue Open (10h < 24h)
+        c_open_fresh = self.create_sample_complaint(
+            email="open_fr@velhightech.com",
+            status="Open",
+            timestamp=t_now - timedelta(hours=10)
+        )
+        # Overdue Under Review (85h >= 72h)
+        c_ur_overdue = self.create_sample_complaint(
+            email="ur_od@velhightech.com",
+            status="Under Review",
+            timestamp=t_now - timedelta(hours=85)
+        )
+        # Non-overdue Under Review (30h < 72h)
+        c_ur_fresh = self.create_sample_complaint(
+            email="ur_fr@velhightech.com",
+            status="Under Review",
+            timestamp=t_now - timedelta(hours=30)
+        )
+        # Action Taken at 100h
+        c_at = self.create_sample_complaint(
+            email="at@velhightech.com",
+            status="Action Taken",
+            timestamp=t_now - timedelta(hours=100)
+        )
+        # Closed at 200h
+        c_closed = self.create_sample_complaint(
+            email="cl@velhightech.com",
+            status="Closed",
+            timestamp=t_now - timedelta(hours=200)
+        )
+
+        # Query pending queue
+        queue = get_admin_pending_action_queue(now=t_now)
+        queue_ids = set(item["id"] for item in queue)
+
+        expected_overdue_ids = {c_open_overdue.id, c_ur_overdue.id}
+        self.assertEqual(queue_ids, expected_overdue_ids, "Pending action queue does not match expected overdue complaints.")
+
+        # Process reminders
+        gen_count = process_pending_action_reminders(now=t_now)
+        self.assertEqual(gen_count, 2, "Exactly 2 reminders should have been generated.")
+
+        # Get notification complaint IDs
+        notifs = Notification.query.filter_by(
+            recipient_role="admin",
+            notification_type="pending_reminder"
+        ).all()
+        notified_complaint_ids = set(n.complaint_id for n in notifs)
+
+        # Verify exact agreement
+        self.assertEqual(queue_ids, notified_complaint_ids, "Pending action queue and generated reminder notifications must agree.")
+
+    @patch("grievai_app.send_status_update_email")
+    def test_old_unread_reminders_retained_on_status_change(self, mock_email):
+        """Task 8: Check current behavior: old unread reminder remains unread in database when complaint status changes."""
+        t_now = datetime(2026, 10, 25, 12, 0, 0)
+
+        # 1. Create Open complaint overdue by 26h
+        c = self.create_sample_complaint(
+            email="status_change@velhightech.com",
+            status="Open",
+            timestamp=t_now - timedelta(hours=26)
+        )
+
+        # 2. Trigger reminder sweep
+        count = process_pending_action_reminders(now=t_now)
+        self.assertEqual(count, 1)
+
+        reminder_notif = Notification.query.filter_by(
+            recipient_role="admin",
+            complaint_id=c.id,
+            notification_type="pending_reminder"
+        ).first()
+        self.assertIsNotNone(reminder_notif)
+        self.assertFalse(reminder_notif.is_read, "Newly generated reminder should be unread.")
+        notif_id = reminder_notif.id
+
+        # 3. Admin updates status to "Under Review" via POST /admin
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+        csrf = self.get_csrf_token()
+
+        response = self.client.post("/admin", data={
+            "csrf_token": csrf,
+            "complaint_id": str(c.id),
+            "status": "Under Review",
+            "admin_remarks": "Assigned to enquiry panel."
+        }, follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+
+        # 4. Check complaint status updated in DB
+        db.session.expire_all()
+        updated_c = db.session.get(Complaint, c.id)
+        self.assertEqual(updated_c.status, "Under Review")
+
+        # 5. Check reminder notification: retained in audit records and marked resolved
+        check_notif = db.session.get(Notification, notif_id)
+        self.assertIsNotNone(check_notif, "Reminder notification should be retained in audit records.")
+        self.assertTrue(check_notif.is_resolved, "Reminder notification is marked resolved.")
+        self.assertIsNotNone(check_notif.resolved_at, "Reminder notification has resolved_at timestamp.")
+        self.assertTrue(check_notif.is_read, "Resolved reminder notification is marked read.")
+        self.assertIsNotNone(check_notif.read_at, "read_at timestamp is populated.")
+
+        # 6. Verify that queue reflects updated status and is no longer flagged (timestamp was reset)
+        queue_after = get_admin_pending_action_queue(now=t_now)
+        queue_after_ids = [item["id"] for item in queue_after]
+        self.assertNotIn(c.id, queue_after_ids, "Freshly updated complaint should no longer be overdue in pending queue.")
+
+
+
+
+class TestStalePendingActionResolution(BaseNotificationTestCase):
+    """
+    Automated test verification for automatic resolution of stale pending-action notifications:
+    - Atomicity, idempotency, unread counter exclusion, historical retention, and safe re-reminders.
+    """
+
+    def test_overdue_reminder_initially_unresolved(self):
+        """1. Verify overdue reminder is created and initially in unresolved state."""
+        t_now = datetime(2026, 10, 25, 12, 0, 0)
+        c = self.create_sample_complaint(
+            email="s_unres@velhightech.com",
+            status="Open",
+            timestamp=t_now - timedelta(hours=25)
+        )
+
+        count = process_pending_action_reminders(now=t_now)
+        self.assertEqual(count, 1)
+
+        notif = Notification.query.filter_by(
+            recipient_role="admin",
+            complaint_id=c.id,
+            notification_type="pending_reminder"
+        ).first()
+
+        self.assertIsNotNone(notif)
+        self.assertFalse(notif.is_resolved, "New pending reminder must be initially unresolved.")
+        self.assertIsNone(notif.resolved_at, "New pending reminder resolved_at must initially be None.")
+        self.assertFalse(notif.is_read, "New pending reminder must initially be unread.")
+
+    @patch("grievai_app.send_status_update_email")
+    def test_updating_complaint_resolves_stale_reminders(self, mock_email):
+        """2. Verify updating complaint status/remarks resolves all associated stale pending reminders."""
+        t_now = datetime(2026, 10, 25, 12, 0, 0)
+        c = self.create_sample_complaint(
+            email="s_resolve@velhightech.com",
+            status="Open",
+            timestamp=t_now - timedelta(hours=26)
+        )
+
+        process_pending_action_reminders(now=t_now)
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+        csrf = self.get_csrf_token()
+
+        response = self.client.post("/admin", data={
+            "csrf_token": csrf,
+            "complaint_id": str(c.id),
+            "status": "Under Review",
+            "remarks": "Assigned to enquiry panel."
+        }, follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+
+        notif = Notification.query.filter_by(
+            recipient_role="admin",
+            complaint_id=c.id,
+            notification_type="pending_reminder"
+        ).first()
+
+        self.assertIsNotNone(notif)
+        self.assertTrue(notif.is_resolved, "Pending reminder must be marked resolved upon complaint update.")
+        self.assertIsNotNone(notif.resolved_at, "Pending reminder must have resolved_at timestamp populated.")
+        self.assertTrue(notif.is_read, "Resolved reminder must also be marked read.")
+        self.assertIsNotNone(notif.read_at, "Resolved reminder read_at must be populated.")
+
+    def test_historical_record_persisted_with_dedup_and_timestamps(self):
+        """3. Verify historical reminder record remains intact in DB with original ID, dedup_key, and message."""
+        t_now = datetime(2026, 10, 25, 12, 0, 0)
+        c = self.create_sample_complaint(status="Open", timestamp=t_now - timedelta(hours=28))
+        process_pending_action_reminders(now=t_now)
+
+        notif_before = Notification.query.filter_by(complaint_id=c.id, notification_type="pending_reminder").first()
+        orig_id = notif_before.id
+        orig_title = notif_before.title
+        orig_msg = notif_before.message
+        orig_dedup = notif_before.dedup_key
+        orig_created = notif_before.created_at
+
+        t_res = t_now + timedelta(hours=2)
+        resolve_pending_reminders_for_complaint(c.id, resolved_at=t_res, commit=True)
+
+        notif_after = db.session.get(Notification, orig_id)
+        self.assertIsNotNone(notif_after, "Historical reminder row must never be deleted from DB.")
+        self.assertEqual(notif_after.id, orig_id)
+        self.assertEqual(notif_after.title, orig_title)
+        self.assertEqual(notif_after.message, orig_msg)
+        self.assertEqual(notif_after.dedup_key, orig_dedup)
+        self.assertEqual(notif_after.created_at, orig_created)
+        self.assertTrue(notif_after.is_resolved)
+        self.assertEqual(notif_after.resolved_at, t_res)
+
+    @patch("grievai_app.send_status_update_email")
+    def test_resolved_reminders_excluded_from_active_unread_count(self, mock_email):
+        """4. Verify resolved reminders are excluded from active unread count and bell badge."""
+        t_now = datetime(2026, 10, 25, 12, 0, 0)
+        c = self.create_sample_complaint(status="Open", timestamp=t_now - timedelta(hours=26))
+        process_pending_action_reminders(now=t_now)
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+        csrf = self.get_csrf_token()
+
+        # Before update: unread count should be 1
+        resp_before = self.client.get("/admin/notifications")
+        self.assertEqual(resp_before.status_code, 200)
+        self.assertEqual(resp_before.get_json()["unread_count"], 1)
+
+        # Update complaint
+        self.client.post("/admin", data={
+            "csrf_token": csrf,
+            "complaint_id": str(c.id),
+            "status": "Under Review",
+            "remarks": "Investigation underway."
+        }, follow_redirects=True)
+
+        # After update: unread count must be 0
+        resp_after = self.client.get("/admin/notifications")
+        self.assertEqual(resp_after.status_code, 200)
+        data_after = resp_after.get_json()
+        self.assertEqual(data_after["unread_count"], 0, "Resolved reminder must be excluded from unread count.")
+        self.assertEqual(len(data_after["notifications"]), 1, "Historical reminder must still appear in notification list.")
+        self.assertTrue(data_after["notifications"][0]["is_resolved"])
+
+    @patch("grievai_app.send_status_update_email")
+    def test_unrelated_notifications_remain_unchanged(self, mock_email):
+        """5. Verify resolving a complaint's reminder does NOT alter unrelated notifications or other complaints' reminders."""
+        t_now = datetime(2026, 10, 25, 12, 0, 0)
+
+        # 1. Unrelated general admin alert (new_complaint)
+        notif_new = create_notification(
+            recipient_role="admin",
+            title="General Incident Alert",
+            message="New report submitted.",
+            notification_type="new_complaint"
+        )
+
+        # 2. Complaint A (to be resolved)
+        cA = self.create_sample_complaint(email="cA@velhightech.com", status="Open", timestamp=t_now - timedelta(hours=26))
+        # 3. Complaint B (to remain unresolved)
+        cB = self.create_sample_complaint(email="cB@velhightech.com", status="Open", timestamp=t_now - timedelta(hours=26))
+
+        process_pending_action_reminders(now=t_now)
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+        csrf = self.get_csrf_token()
+
+        # Update ONLY Complaint A
+        self.client.post("/admin", data={
+            "csrf_token": csrf,
+            "complaint_id": str(cA.id),
+            "status": "Under Review",
+            "remarks": "Panel formed for A."
+        }, follow_redirects=True)
+
+        # Check Complaint A's reminder -> resolved
+        notif_A = Notification.query.filter_by(complaint_id=cA.id, notification_type="pending_reminder").first()
+        self.assertTrue(notif_A.is_resolved)
+
+        # Check unrelated new_complaint notification -> untouched, still unread
+        notif_new_check = db.session.get(Notification, notif_new.id)
+        self.assertFalse(notif_new_check.is_resolved)
+        self.assertFalse(notif_new_check.is_read)
+
+        # Check Complaint B's reminder -> untouched, still unresolved and unread
+        notif_B = Notification.query.filter_by(complaint_id=cB.id, notification_type="pending_reminder").first()
+        self.assertFalse(notif_B.is_resolved)
+        self.assertFalse(notif_B.is_read)
+
+        # Active unread count must be 2 (new_complaint + B's reminder)
+        resp = self.client.get("/admin/notifications")
+        self.assertEqual(resp.get_json()["unread_count"], 2)
+
+    @patch("grievai_app.send_status_update_email")
+    def test_repeated_updates_idempotent_and_safe(self, mock_email):
+        """6. Verify repeated complaint updates do not create duplicate resolution events or corrupt history."""
+        t_now = datetime(2026, 10, 25, 12, 0, 0)
+        c = self.create_sample_complaint(status="Open", timestamp=t_now - timedelta(hours=26))
+        process_pending_action_reminders(now=t_now)
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+        csrf = self.get_csrf_token()
+
+        # Update 1
+        resp1 = self.client.post(f"/admin/complaint/{c.id}", data={
+            "csrf_token": csrf,
+            "status": "Under Review",
+            "admin_remarks": "Action 1."
+        }, follow_redirects=True)
+        self.assertEqual(resp1.status_code, 200)
+
+        notif1 = Notification.query.filter_by(complaint_id=c.id, notification_type="pending_reminder").first()
+        res_time1 = notif1.resolved_at
+
+        # Update 2 immediately after
+        resp2 = self.client.post(f"/admin/complaint/{c.id}", data={
+            "csrf_token": csrf,
+            "status": "Under Review",
+            "admin_remarks": "Action 2: Added notes."
+        }, follow_redirects=True)
+        self.assertEqual(resp2.status_code, 200)
+
+        notifs = Notification.query.filter_by(complaint_id=c.id, notification_type="pending_reminder").all()
+        self.assertEqual(len(notifs), 1, "Repeated updates must not duplicate reminder records.")
+        self.assertTrue(notifs[0].is_resolved)
+        self.assertEqual(notifs[0].resolved_at, res_time1)
+
+    @patch("grievai_app.send_status_update_email")
+    def test_failed_transaction_rolls_back_atomically(self, mock_email):
+        """7. Verify transaction atomicity: if commit fails, neither complaint nor notification changes are committed."""
+        t_now = datetime(2026, 10, 25, 12, 0, 0)
+        c = self.create_sample_complaint(status="Open", timestamp=t_now - timedelta(hours=26))
+        process_pending_action_reminders(now=t_now)
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+        csrf = self.get_csrf_token()
+
+        with patch.object(db.session, "commit", side_effect=Exception("Simulated Database Commit Failure")):
+            response = self.client.post("/admin", data={
+                "csrf_token": csrf,
+                "complaint_id": str(c.id),
+                "status": "Under Review",
+                "remarks": "Failing update."
+            }, follow_redirects=True)
+            self.assertEqual(response.status_code, 200)
+
+        # Verify complaint was NOT committed
+        db.session.expire_all()
+        check_c = db.session.get(Complaint, c.id)
+        self.assertEqual(check_c.status, "Open", "Complaint status change must roll back on transaction failure.")
+
+        # Verify notification was NOT marked resolved
+        notif = Notification.query.filter_by(complaint_id=c.id, notification_type="pending_reminder").first()
+        self.assertFalse(notif.is_resolved, "Notification resolution must roll back on transaction failure.")
+        self.assertIsNone(notif.resolved_at)
+
+    @patch("grievai_app.send_status_update_email")
+    def test_later_valid_reminder_generated_without_unintended_deduplication(self, mock_email):
+        """8. Verify future reminder can be generated when complaint becomes overdue again without dedup collision."""
+        t_0 = datetime(2026, 10, 20, 10, 0, 0)
+        c = self.create_sample_complaint(status="Open", timestamp=t_0)
+
+        # 1. First overdue reminder generated at t_0 + 25h
+        t_1 = t_0 + timedelta(hours=25)
+        count1 = process_pending_action_reminders(now=t_1)
+        self.assertEqual(count1, 1)
+
+        # 2. Admin takes action and updates status to Under Review at t_2
+        t_2 = t_0 + timedelta(hours=26)
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+        csrf = self.get_csrf_token()
+
+        with patch("backend.routes.admin_routes.datetime") as mock_dt:
+            mock_dt.utcnow.return_value = t_2
+            self.client.post("/admin", data={
+                "csrf_token": csrf,
+                "complaint_id": str(c.id),
+                "status": "Under Review",
+                "remarks": "Assigned to committee."
+            }, follow_redirects=True)
+
+        # First reminder is resolved
+        rem_1 = Notification.query.filter_by(complaint_id=c.id, dedup_key=f"reminder:open:{c.id}:24h").first()
+        self.assertTrue(rem_1.is_resolved)
+
+        # 3. Advance time by 75 hours from t_2 (overdue in Under Review status)
+        t_3 = t_2 + timedelta(hours=75)
+        count2 = process_pending_action_reminders(now=t_3)
+        self.assertEqual(count2, 1, "New valid reminder must be generated for Under Review without dedup block.")
+
+        # Verify second reminder exists and is active
+        rem_2 = Notification.query.filter_by(complaint_id=c.id, dedup_key=f"reminder:in_progress:{c.id}:72h").first()
+        self.assertIsNotNone(rem_2)
+        self.assertFalse(rem_2.is_resolved)
+        self.assertFalse(rem_2.is_read)
+
+        # Verify both historical resolved reminder and new active reminder exist in DB
+        all_reminders = Notification.query.filter_by(complaint_id=c.id, notification_type="pending_reminder").all()
+        self.assertEqual(len(all_reminders), 2)
+
+    @patch("grievai_app.send_status_update_email")
+    def test_existing_status_transitions_and_student_tracking_work(self, mock_email):
+        """9. Verify existing status transitions, student notifications, and tracking token lookup remain unaffected."""
+        c = self.create_sample_complaint(email="student@velhightech.com", status="Open")
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+        csrf = self.get_csrf_token()
+
+        resp = self.client.post("/admin", data={
+            "csrf_token": csrf,
+            "complaint_id": str(c.id),
+            "status": "Action Taken",
+            "remarks": "Action completed."
+        }, follow_redirects=True)
+        self.assertEqual(resp.status_code, 200)
+
+        # Student notification was created
+        student_notif = Notification.query.filter_by(
+            recipient_role="student",
+            recipient_email="student@velhightech.com",
+            complaint_id=c.id
+        ).first()
+        self.assertIsNotNone(student_notif)
+        self.assertIn("Action Taken", student_notif.title)
+
+        # Student tracking lookup succeeds
+        track_resp = self.client.post("/track", data={
+            "csrf_token": csrf,
+            "complaint_id": str(c.id),
+            "tracking_token": "CONFIDENTIAL-TEST-TOKEN"
+        })
+        self.assertEqual(track_resp.status_code, 200)
+        self.assertIn(b"Action Taken", track_resp.data)
 
 
 if __name__ == "__main__":

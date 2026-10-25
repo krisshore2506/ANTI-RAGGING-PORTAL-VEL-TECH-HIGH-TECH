@@ -135,6 +135,32 @@ def create_app(config_overrides=None):
                         if col_name not in columns:
                             connection.execute(sa_text(f"ALTER TABLE complaint ADD COLUMN {col_name} {col_type}"))
                     connection.commit()
+
+            if "notification" in inspector.get_table_names():
+                notif_columns = [col["name"] for col in inspector.get_columns("notification")]
+                notif_column_defs = {
+                    "is_resolved": "BOOLEAN DEFAULT 0",
+                    "resolved_at": "DATETIME"
+                }
+                with db.engine.connect() as connection:
+                    for col_name, col_type in notif_column_defs.items():
+                        if col_name not in notif_columns:
+                            connection.execute(sa_text(f"ALTER TABLE notification ADD COLUMN {col_name} {col_type}"))
+
+                    # Ensure dedup_key index is non-unique to allow multiple historical resolved cycles
+                    try:
+                        indices = connection.execute(sa_text(
+                            "SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name='notification' AND name='ix_notification_dedup_key'"
+                        )).fetchall()
+                        for idx_name, idx_sql in indices:
+                            if idx_sql and "UNIQUE" in idx_sql.upper():
+                                connection.execute(sa_text("DROP INDEX ix_notification_dedup_key"))
+                                connection.execute(sa_text("CREATE INDEX ix_notification_dedup_key ON notification (dedup_key)"))
+                                break
+                    except Exception as idx_err:
+                        logger.warning("Notification dedup index inspection note: %s", str(idx_err))
+
+                    connection.commit()
             logger.info("Database schema initialized/verified.")
         except Exception as e:
             logger.error("Database schema migration error: %s", str(e))

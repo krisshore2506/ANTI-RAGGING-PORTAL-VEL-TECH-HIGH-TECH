@@ -21,7 +21,8 @@ from backend.models.audit import SMSLog, CallLog
 from backend.utils.email_sms import send_status_update_email
 from backend.services.notification_service import (
     create_notification,
-    get_admin_pending_action_queue
+    get_admin_pending_action_queue,
+    resolve_pending_reminders_for_complaint
 )
 
 admin_bp = Blueprint("admin_bp", __name__)
@@ -60,7 +61,17 @@ def admin():
 
             complaint.admin_remarks = remarks
             complaint.timestamp = datetime.utcnow()
-            db.session.commit()
+
+            # Atomically resolve stale pending reminders for this complaint
+            resolve_pending_reminders_for_complaint(complaint.id, resolved_at=complaint.timestamp, commit=False)
+
+            try:
+                db.session.commit()
+            except Exception as commit_err:
+                db.session.rollback()
+                logger.error("Failed to commit status update for incident #%s: %s", complaint.id, str(commit_err))
+                flash("An error occurred while updating the complaint. Changes were not saved.", "error")
+                return redirect(url_for("admin"))
 
             try:
                 summary_msg = f"Your incident report #{complaint.id} status is now '{complaint.status}'."
@@ -129,9 +140,10 @@ def admin():
         recipient_role="admin"
     ).order_by(Notification.created_at.desc()).limit(20).all()
 
-    admin_unread_count = Notification.query.filter_by(
-        recipient_role="admin",
-        is_read=False
+    admin_unread_count = Notification.query.filter(
+        Notification.recipient_role == "admin",
+        Notification.is_read == False,
+        Notification.is_resolved == False
     ).count()
 
     pending_queue = get_admin_pending_action_queue()
@@ -171,7 +183,17 @@ def admin_complaint_details(complaint_id):
             complaint.status = target_status
         complaint.admin_remarks = remarks
         complaint.timestamp = datetime.utcnow()
-        db.session.commit()
+
+        # Atomically resolve stale pending reminders for this complaint
+        resolve_pending_reminders_for_complaint(complaint.id, resolved_at=complaint.timestamp, commit=False)
+
+        try:
+            db.session.commit()
+        except Exception as commit_err:
+            db.session.rollback()
+            logger.error("Failed to commit detail status update for incident #%s: %s", complaint.id, str(commit_err))
+            flash("An error occurred while updating the complaint. Changes were not saved.", "error")
+            return redirect(url_for("admin_complaint_details", complaint_id=complaint.id))
 
         try:
             summary_msg = f"Your incident report #{complaint.id} status is now '{complaint.status}'."
@@ -245,9 +267,10 @@ def admin_notifications():
         recipient_role="admin"
     ).order_by(Notification.created_at.desc()).limit(50).all()
 
-    unread_count = Notification.query.filter_by(
-        recipient_role="admin",
-        is_read=False
+    unread_count = Notification.query.filter(
+        Notification.recipient_role == "admin",
+        Notification.is_read == False,
+        Notification.is_resolved == False
     ).count()
 
     return jsonify({
@@ -273,9 +296,10 @@ def admin_mark_notification_read(notification_id):
     notif.read_at = datetime.utcnow()
     db.session.commit()
 
-    unread_count = Notification.query.filter_by(
-        recipient_role="admin",
-        is_read=False
+    unread_count = Notification.query.filter(
+        Notification.recipient_role == "admin",
+        Notification.is_read == False,
+        Notification.is_resolved == False
     ).count()
 
     return jsonify({"success": True, "id": notif.id, "unread_count": unread_count})

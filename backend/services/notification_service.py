@@ -20,7 +20,7 @@ def create_notification(recipient_role, title, message, notification_type, recip
     """
     try:
         if dedup_key:
-            existing = Notification.query.filter_by(dedup_key=dedup_key).first()
+            existing = Notification.query.filter_by(dedup_key=dedup_key, is_resolved=False).first()
             if existing:
                 return existing
 
@@ -125,7 +125,7 @@ def process_pending_action_reminders(now=None):
                 if elapsed_hours >= REMINDER_OPEN_HOURS:
                     bucket = int(elapsed_hours // REMINDER_OPEN_HOURS) * REMINDER_OPEN_HOURS
                     dedup_key = f"reminder:open:{c.id}:{bucket}h"
-                    existing = Notification.query.filter_by(dedup_key=dedup_key).first()
+                    existing = Notification.query.filter_by(dedup_key=dedup_key, is_resolved=False).first()
                     if not existing:
                         title = f"Action Required: Incident #{c.id} Pending Initial Review"
                         message = f"Incident report #{c.id} has remained in 'Open' status for {int(elapsed_hours)} hours without committee action (review window: {REMINDER_OPEN_HOURS}h)."
@@ -146,7 +146,7 @@ def process_pending_action_reminders(now=None):
                 if elapsed_hours >= REMINDER_IN_PROGRESS_HOURS:
                     bucket = int(elapsed_hours // REMINDER_IN_PROGRESS_HOURS) * REMINDER_IN_PROGRESS_HOURS
                     dedup_key = f"reminder:in_progress:{c.id}:{bucket}h"
-                    existing = Notification.query.filter_by(dedup_key=dedup_key).first()
+                    existing = Notification.query.filter_by(dedup_key=dedup_key, is_resolved=False).first()
                     if not existing:
                         title = f"Action Required: Incident #{c.id} Awaiting Follow-up"
                         message = f"Incident report #{c.id} has been 'Under Review' without updates for {int(elapsed_hours)} hours (follow-up window: {REMINDER_IN_PROGRESS_HOURS}h)."
@@ -165,6 +165,49 @@ def process_pending_action_reminders(now=None):
         logger.error("Error processing pending action reminders: %s", str(e))
 
     return generated_count
+
+
+def resolve_pending_reminders_for_complaint(complaint_id, resolved_at=None, commit=False):
+    """
+    Atomically resolves any active (unresolved) pending_reminder notifications for the given complaint_id.
+    Marks them as resolved (is_resolved=True, resolved_at) and read (is_read=True, read_at).
+    Does NOT delete records, preserving full audit trail.
+    If commit=False, caller must commit the session atomically with complaint updates.
+    Returns the count of resolved notifications.
+    """
+    if resolved_at is None:
+        resolved_at = datetime.utcnow()
+
+    resolved_count = 0
+    try:
+        pending_notifs = Notification.query.filter(
+            Notification.complaint_id == complaint_id,
+            Notification.recipient_role == "admin",
+            Notification.notification_type == "pending_reminder",
+            Notification.is_resolved == False
+        ).all()
+
+        for notif in pending_notifs:
+            notif.is_resolved = True
+            notif.resolved_at = resolved_at
+            if not notif.is_read:
+                notif.is_read = True
+                notif.read_at = resolved_at
+            resolved_count += 1
+
+        if commit and resolved_count > 0:
+            db.session.commit()
+
+        if resolved_count > 0:
+            logger.info("Resolved %d stale pending reminder(s) for incident #%s", resolved_count, complaint_id)
+
+    except Exception as e:
+        if commit:
+            db.session.rollback()
+        logger.error("Error resolving pending reminders for incident #%s: %s", complaint_id, str(e))
+        raise
+
+    return resolved_count
 
 # Alias for backwards compatibility with tests
 check_pending_action_reminders = process_pending_action_reminders
