@@ -53,7 +53,7 @@
                         <ul class="notif-list" id="admin-notif-list">
                             {% if notifications and notifications|length > 0 %}
                                 {% for n in notifications %}
-                                <li class="notif-item {% if not n.is_read %}unread{% endif %}" id="admin-notif-{{ n.id }}" data-id="{{ n.id }}">
+                                <li class="notif-item {% if not n.is_read and not n.is_resolved %}unread{% endif %}{% if n.is_resolved %} resolved{% endif %}" id="admin-notif-{{ n.id }}" data-id="{{ n.id }}">
                                     <div class="notif-icon {{ n.notification_type }}">
                                         {% if n.notification_type == 'pending_reminder' %}
                                         <svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -86,10 +86,14 @@
                                                 Review Incident #{{ n.complaint_id }}
                                             </a>
                                             {% endif %}
-                                            {% if not n.is_read %}
+                                            {% if not n.is_read and not n.is_resolved %}
                                             <button type="button" class="notif-action-btn admin-read-btn" data-id="{{ n.id }}">
                                                 Mark read
                                             </button>
+                                            {% elif n.is_resolved %}
+                                            <span class="notif-resolved-badge" style="font-size: 0.72rem; color: #10b981; font-weight: 600; padding: 2px 6px; background: rgba(16, 185, 129, 0.1); border-radius: 4px;">
+                                                Resolved
+                                            </span>
                                             {% endif %}
                                         </div>
                                     </div>

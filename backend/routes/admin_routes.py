@@ -21,7 +21,8 @@ from backend.models.audit import SMSLog, CallLog
 from backend.utils.email_sms import send_status_update_email
 from backend.services.notification_service import (
     create_notification,
-    get_admin_pending_action_queue
+    get_admin_pending_action_queue,
+    resolve_pending_reminders_for_complaint
 )
 
 admin_bp = Blueprint("admin_bp", __name__)
@@ -55,12 +56,23 @@ def admin():
                 "Assigned": "Under Review"
             }
             target_status = status_map.get(new_status, new_status)
-            if target_status in valid_statuses:
-                complaint.status = target_status
 
-            complaint.admin_remarks = remarks
-            complaint.timestamp = datetime.utcnow()
-            db.session.commit()
+            try:
+                if target_status in valid_statuses:
+                    complaint.status = target_status
+
+                complaint.admin_remarks = remarks
+                complaint.timestamp = datetime.utcnow()
+
+                # Atomically resolve stale pending reminders for this complaint
+                resolve_pending_reminders_for_complaint(complaint.id, resolved_at=complaint.timestamp, commit=False)
+
+                db.session.commit()
+            except Exception as commit_err:
+                db.session.rollback()
+                logger.error("Failed to commit status update for incident #%s: %s", complaint.id, str(commit_err))
+                flash("An error occurred while updating the complaint. Changes were not saved.", "error")
+                return redirect(url_for("admin"))
 
             try:
                 summary_msg = f"Your incident report #{complaint.id} status is now '{complaint.status}'."
@@ -129,9 +141,10 @@ def admin():
         recipient_role="admin"
     ).order_by(Notification.created_at.desc()).limit(20).all()
 
-    admin_unread_count = Notification.query.filter_by(
-        recipient_role="admin",
-        is_read=False
+    admin_unread_count = Notification.query.filter(
+        Notification.recipient_role == "admin",
+        Notification.is_read == False,
+        Notification.is_resolved == False
     ).count()
 
     pending_queue = get_admin_pending_action_queue()
@@ -167,11 +180,22 @@ def admin_complaint_details(complaint_id):
             "Assigned": "Under Review"
         }
         target_status = status_map.get(new_status, new_status)
-        if target_status in valid_statuses:
-            complaint.status = target_status
-        complaint.admin_remarks = remarks
-        complaint.timestamp = datetime.utcnow()
-        db.session.commit()
+
+        try:
+            if target_status in valid_statuses:
+                complaint.status = target_status
+            complaint.admin_remarks = remarks
+            complaint.timestamp = datetime.utcnow()
+
+            # Atomically resolve stale pending reminders for this complaint
+            resolve_pending_reminders_for_complaint(complaint.id, resolved_at=complaint.timestamp, commit=False)
+
+            db.session.commit()
+        except Exception as commit_err:
+            db.session.rollback()
+            logger.error("Failed to commit detail status update for incident #%s: %s", complaint.id, str(commit_err))
+            flash("An error occurred while updating the complaint. Changes were not saved.", "error")
+            return redirect(url_for("admin_complaint_details", complaint_id=complaint.id))
 
         try:
             summary_msg = f"Your incident report #{complaint.id} status is now '{complaint.status}'."
@@ -245,9 +269,10 @@ def admin_notifications():
         recipient_role="admin"
     ).order_by(Notification.created_at.desc()).limit(50).all()
 
-    unread_count = Notification.query.filter_by(
-        recipient_role="admin",
-        is_read=False
+    unread_count = Notification.query.filter(
+        Notification.recipient_role == "admin",
+        Notification.is_read == False,
+        Notification.is_resolved == False
     ).count()
 
     return jsonify({
@@ -269,16 +294,23 @@ def admin_mark_notification_read(notification_id):
     if not notif:
         return jsonify({"error": "Notification not found"}), 404
 
-    notif.is_read = True
-    notif.read_at = datetime.utcnow()
-    db.session.commit()
+    try:
+        notif.is_read = True
+        if not notif.read_at:
+            notif.read_at = datetime.utcnow()
+        db.session.commit()
 
-    unread_count = Notification.query.filter_by(
-        recipient_role="admin",
-        is_read=False
-    ).count()
+        unread_count = Notification.query.filter(
+            Notification.recipient_role == "admin",
+            Notification.is_read == False,
+            Notification.is_resolved == False
+        ).count()
 
-    return jsonify({"success": True, "id": notif.id, "unread_count": unread_count})
+        return jsonify({"success": True, "id": notif.id, "unread_count": unread_count})
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Error marking notification %s as read: %s", notification_id, str(e))
+        return jsonify({"error": "Failed to update notification"}), 500
 
 
 @admin_bp.route("/admin/notifications/mark_all_read", methods=["POST"], endpoint="admin_mark_all_notifications_read")
@@ -286,18 +318,35 @@ def admin_mark_all_notifications_read():
     if not session.get("admin_logged_in"):
         return jsonify({"error": "Unauthorized"}), 401
 
-    unread_notifs = Notification.query.filter_by(
-        recipient_role="admin",
-        is_read=False
-    ).all()
+    try:
+        unread_notifs = Notification.query.filter_by(
+            recipient_role="admin",
+            is_read=False
+        ).all()
 
-    now = datetime.utcnow()
-    for n in unread_notifs:
-        n.is_read = True
-        n.read_at = now
+        now = datetime.utcnow()
+        for n in unread_notifs:
+            n.is_read = True
+            if not n.read_at:
+                n.read_at = now
 
-    db.session.commit()
-    return jsonify({"success": True, "marked_count": len(unread_notifs), "unread_count": 0})
+        db.session.commit()
+
+        unread_count = Notification.query.filter(
+            Notification.recipient_role == "admin",
+            Notification.is_read == False,
+            Notification.is_resolved == False
+        ).count()
+
+        return jsonify({
+            "success": True,
+            "marked_count": len(unread_notifs),
+            "unread_count": unread_count
+        })
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Error marking all admin notifications as read: %s", str(e))
+        return jsonify({"error": "Failed to mark notifications as read"}), 500
 
 
 @admin_bp.route("/admin/pending_queue", methods=["GET"], endpoint="admin_pending_queue")
