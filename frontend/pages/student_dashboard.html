@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - Anti-Ragging Portal</title>
+
+    <!-- Link styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body class="dashboard-layout">
+
+    <!-- Header Navbar -->
+    <header class="dashboard-header">
+        <a href="/" class="header-brand brand-header">
+            <div class="college-logo-container">
+            <img src="{{ url_for('static', filename='images/veltech_college_logo.png') }}" alt="Vel Tech High Tech College Logo" class="college-logo">
+        </div>
+            <h1>Anti-Ragging Portal</h1>
+        </a>
+        <div class="header-user">
+            <!-- Student Notification Bell & Dropdown -->
+            <div class="notif-wrapper" id="student-notif-wrapper">
+                <button type="button" class="notif-bell-btn" id="student-notif-bell" aria-label="Notifications" aria-expanded="false" title="View Notifications">
+                    <svg class="svg-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                    <span class="notif-badge {% if not unread_count or unread_count == 0 %}hidden{% endif %}" id="student-notif-badge">{{ unread_count or 0 }}</span>
+                </button>
+                <div class="notif-dropdown" id="student-notif-dropdown" role="region" aria-label="Notification list">
+                    <div class="notif-dropdown-header">
+                        <h4>
+                            <svg class="svg-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                            </svg>
+                            Notifications
+                        </h4>
+                        {% if notifications and unread_count > 0 %}
+                        <button type="button" class="notif-mark-all-btn" id="student-mark-all-btn">Mark all read</button>
+                        {% endif %}
+                    </div>
+                    <ul class="notif-list" id="student-notif-list">
+                        {% if notifications and notifications|length > 0 %}
+                            {% for n in notifications %}
+                            <li class="notif-item {% if not n.is_read %}unread{% endif %}" id="student-notif-{{ n.id }}" data-id="{{ n.id }}">
+                                <div class="notif-icon status">
+                                    <svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                </div>
+                                <div class="notif-content">
+                                    <div class="notif-title">{{ n.title }}</div>
+                                    <div class="notif-msg">{{ n.message }}</div>
+                                    <div class="notif-time">
+                                        <svg class="svg-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polyline points="12 6 12 12 16 14"></polyline>
+                                        </svg>
+                                        {{ n.created_at.strftime('%d %b, %H:%M') if n.created_at else 'Just now' }}
+                                    </div>
+                                    <div class="notif-actions">
+                                        {% if n.complaint_id %}
+                                        <a href="/track?id={{ n.complaint_id }}" class="notif-action-btn primary">
+                                            Track Incident
+                                        </a>
+                                        {% endif %}
+                                        {% if not n.is_read %}
+                                        <button type="button" class="notif-action-btn student-read-btn" data-id="{{ n.id }}">
+                                            Mark as read
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        {% else %}
+                            <li class="notif-empty" id="student-notif-empty">
+                                <svg class="svg-icon" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                </svg>
+                                <div>No new notifications</div>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+
+            <span class="user-email"><svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"></path></svg>{{ email }}</span>
+            <a href="/student_logout" class="btn-secondary" style="padding: 6px 14px; font-size: 13px; border-color: #ef4444; color: #ef4444;"><svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>Logout</a>
+        </div>
+    </header>
+
+    <!-- Main Dashboard Body -->
+    <main class="dashboard-main">
+
+        <!-- Welcome Banner -->
+        <div class="welcome-banner">
+            <h2>Welcome Back!</h2>
+            <p>File grievances, monitor resolution pathways, and keep track of campus operations in real time.</p>
+        </div>
+
+        <!-- Statistics Counter Cards -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon-wrap total"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg></div>
+                <div class="stat-data">
+                    <h3>Total Filed</h3>
+                    <div class="stat-number">{{ total }}</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon-wrap open"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></div>
+                <div class="stat-data">
+                    <h3>Open</h3>
+                    <div class="stat-number">{{ open_count }}</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon-wrap progress"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+                <div class="stat-data">
+                    <h3>In Progress</h3>
+                    <div class="stat-number">{{ in_progress }}</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon-wrap resolved"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
+                <div class="stat-data">
+                    <h3>Resolved</h3>
+                    <div class="stat-number">{{ resolved }}</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Action Panels -->
+        <section class="actions-wrap">
+            <h3 class="actions-title">Grievance Actions</h3>
+            <div class="actions-buttons">
+                <button class="btn-primary" onclick="location.href='/complaint_form'">
+                    <svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 6px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Raise a New Complaint
+                </button>
+                <button class="btn-secondary" onclick="location.href='/track'">
+                    <svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 6px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>Enter Ticket ID to Track
+                </button>
+            </div>
+        </section>
+
+        <!-- Complaint History List -->
+        <section class="history-wrap">
+            <div class="history-header">
+                <h2>Your Complaint History</h2>
+            </div>
+
+            {% if complaints %}
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Ticket ID</th>
+                                <th>Complaint Title</th>
+                                <th>Department / Category</th>
+                                <th>Priority</th>
+                                <th>Assigned Resolver</th>
+                                <th>Status</th>
+                                <th>Filed On</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in complaints %}
+                                <tr>
+                                    <td style="font-weight: 600;">#{{ c.id }}</td>
+                                    <td>{{ c.complaint_title or "General Grievance" }}</td>
+                                    <td>{{ c.department }}</td>
+                                    <td>
+                                        <span class="prio-badge prio-{{ c.priority|lower if c.priority else 'medium' }}">
+                                            {{ c.priority or 'Medium' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if c.assigned_cleaner and c.assigned_cleaner != "Not Assigned" %}
+                                            <svg class="svg-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>{{ c.assigned_cleaner }}
+                                        {% else %}
+                                            <span style="color: var(--text-muted);">None</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-{{ c.status|lower|replace(' ', '-') }}">
+                                            {{ c.status }}
+                                        </span>
+                                    </td>
+                                    <td style="font-size: 13px; color: var(--text-muted);">
+                                        {{ c.timestamp.strftime('%d %b %Y, %H:%M') if c.timestamp else 'N/A' }}
+                                    </td>
+                                    <td>
+                                        <a href="/track?id={{ c.id }}" class="btn-secondary" style="padding: 6px 12px; font-size: 12px;">Track</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <span class="empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin: 0 auto 12px; display: block; opacity: 0.6;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></span>
+                    <h3>No complaints found</h3>
+                    <p>You have not submitted any complaints yet. Use the "Raise a New Complaint" button above to log one.</p>
+                </div>
+            {% endif %}
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    {% include 'components/footer.html' %}
+
+
+    <!-- Student Notification Client Logic -->
+    <script>
+        (function() {
+            var bell = document.getElementById("student-notif-bell");
+            var dropdown = document.getElementById("student-notif-dropdown");
+            var badge = document.getElementById("student-notif-badge");
+            var markAllBtn = document.getElementById("student-mark-all-btn");
+            var csrfToken = "{{ session.get('csrf_token', '') }}";
+
+            if (bell && dropdown) {
+                bell.addEventListener("click", function(e) {
+                    e.stopPropagation();
+                    var isExpanded = bell.getAttribute("aria-expanded") === "true";
+                    dropdown.classList.toggle("show");
+                    bell.setAttribute("aria-expanded", !isExpanded);
+                });
+
+                document.addEventListener("click", function(e) {
+                    if (!dropdown.contains(e.target) && !bell.contains(e.target)) {
+                        dropdown.classList.remove("show");
+                        bell.setAttribute("aria-expanded", "false");
+                    }
+                });
+            }
+
+            function updateBadge(count) {
+                if (!badge) return;
+                badge.textContent = count;
+                if (count <= 0) {
+                    badge.classList.add("hidden");
+                    if (markAllBtn) markAllBtn.style.display = "none";
+                } else {
+                    badge.classList.remove("hidden");
+                }
+            }
+
+            // Mark individual notification as read
+            document.querySelectorAll(".student-read-btn").forEach(function(btn) {
+                btn.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var notifId = this.getAttribute("data-id");
+                    var item = document.getElementById("student-notif-" + notifId);
+                    var self = this;
+
+                    fetch("/student/notifications/" + notifId + "/read", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": csrfToken
+                        },
+                        body: JSON.stringify({ csrf_token: csrfToken })
+                    })
+                    .then(function(res) { return res.json(); })
+                    .then(function(data) {
+                        if (data.success) {
+                            if (item) item.classList.remove("unread");
+                            self.remove();
+                            updateBadge(data.unread_count);
+                        }
+                    })
+                    .catch(function(err) {
+                        console.error("Failed to mark notification read:", err);
+                    });
+                });
+            });
+
+            // Mark all notifications as read
+            if (markAllBtn) {
+                markAllBtn.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    fetch("/student/notifications/mark_all_read", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": csrfToken
+                        },
+                        body: JSON.stringify({ csrf_token: csrfToken })
+                    })
+                    .then(function(res) { return res.json(); })
+                    .then(function(data) {
+                        if (data.success) {
+                            document.querySelectorAll("#student-notif-list .notif-item.unread").forEach(function(el) {
+                                el.classList.remove("unread");
+                            });
+                            document.querySelectorAll(".student-read-btn").forEach(function(btn) {
+                                btn.remove();
+                            });
+                            updateBadge(0);
+                        }
+                    })
+                    .catch(function(err) {
+                        console.error("Failed to mark all notifications read:", err);
+                    });
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

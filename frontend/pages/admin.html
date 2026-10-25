@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anti-Ragging Committee Dashboard - ARC Portal</title>
+
+    <!-- Link styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+
+    <!-- Load Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="admin-body">
+
+    <div class="admin-layout">
+
+        <!-- Admin Navbar -->
+        <nav class="admin-navbar">
+            <a href="{{ url_for('admin') }}" class="admin-brand brand-header">
+                <div class="college-logo-container college-logo-container-dark">
+            <img src="{{ url_for('static', filename='images/veltech_college_logo.png') }}" alt="Vel Tech High Tech College Logo" class="college-logo">
+        </div>
+                <div class="admin-brand-title">
+                    <h1>Anti-Ragging Committee</h1>
+                    <span>UGC Statutory Compliance & Review Console</span>
+                </div>
+            </a>
+            <div class="admin-nav-actions">
+                <!-- Admin Notification Bell & Dropdown -->
+                <div class="notif-wrapper" id="admin-notif-wrapper">
+                    <button type="button" class="notif-bell-btn" id="admin-notif-bell" aria-label="Notifications" aria-expanded="false" title="Committee Alerts">
+                        <svg class="svg-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        <span class="notif-badge {% if not unread_count or unread_count == 0 %}hidden{% endif %}" id="admin-notif-badge">{{ unread_count or 0 }}</span>
+                    </button>
+                    <div class="notif-dropdown" id="admin-notif-dropdown" role="region" aria-label="Committee Alerts">
+                        <div class="notif-dropdown-header">
+                            <h4>
+                                <svg class="svg-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                </svg>
+                                Committee Alerts
+                            </h4>
+                            {% if notifications and unread_count > 0 %}
+                            <button type="button" class="notif-mark-all-btn" id="admin-mark-all-btn">Mark all read</button>
+                            {% endif %}
+                        </div>
+                        <ul class="notif-list" id="admin-notif-list">
+                            {% if notifications and notifications|length > 0 %}
+                                {% for n in notifications %}
+                                <li class="notif-item {% if not n.is_read %}unread{% endif %}" id="admin-notif-{{ n.id }}" data-id="{{ n.id }}">
+                                    <div class="notif-icon {{ n.notification_type }}">
+                                        {% if n.notification_type == 'pending_reminder' %}
+                                        <svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                        </svg>
+                                        {% else %}
+                                        <svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                            <polyline points="14 2 14 8 20 8"></polyline>
+                                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                                        </svg>
+                                        {% endif %}
+                                    </div>
+                                    <div class="notif-content">
+                                        <div class="notif-title">{{ n.title }}</div>
+                                        <div class="notif-msg">{{ n.message }}</div>
+                                        <div class="notif-time">
+                                            <svg class="svg-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                <circle cx="12" cy="12" r="10"></circle>
+                                                <polyline points="12 6 12 12 16 14"></polyline>
+                                            </svg>
+                                            {{ n.created_at.strftime('%d %b, %H:%M') if n.created_at else 'Just now' }}
+                                        </div>
+                                        <div class="notif-actions">
+                                            {% if n.complaint_id %}
+                                            <a href="/admin/complaint/{{ n.complaint_id }}" class="notif-action-btn primary">
+                                                Review Incident #{{ n.complaint_id }}
+                                            </a>
+                                            {% endif %}
+                                            {% if not n.is_read %}
+                                            <button type="button" class="notif-action-btn admin-read-btn" data-id="{{ n.id }}">
+                                                Mark read
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </li>
+                                {% endfor %}
+                            {% else %}
+                                <li class="notif-empty" id="admin-notif-empty">
+                                    <svg class="svg-icon" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                    </svg>
+                                    <div>No active alerts</div>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+
+                <span style="font-size: 13px; color: #cbd5e1; display: inline-flex; align-items: center; gap: 6px;">
+                    <span style="width: 8px; height: 8px; background-color: #22c55e; border-radius: 50%; display: inline-block;"></span>
+                    Authorized Session
+                </span>
+                <a href="/admin_logout" class="admin-nav-btn" style="border-color: #ef4444; color: #fca5a5;"><svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>Logout</a>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="admin-main">
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <h2 class="admin-page-title" style="margin-bottom: 4px;"><svg class="svg-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -3px; margin-right: 8px;"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg>Anti-Ragging Committee Incident Review Console</h2>
+                    <p style="color: var(--text-muted); font-size: 13px; margin: 0;">Confidential review panel for student grievances and statutory incident investigation.</p>
+                </div>
+                <div style="font-size: 13px; background: #e2e8f0; color: #334155; padding: 6px 14px; border-radius: var(--radius-sm); font-weight: 600;">
+                    Database: <span style="color: #0f172a; font-family: monospace;">anti_ragging_dev.db</span>
+                </div>
+            </div>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-size: 14px;">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- Statistics Grid (Requirement 3: Live DB record counts) -->
+            <section class="admin-stats-grid">
+                <div class="admin-stat-card total">
+                    <div class="admin-stat-label">Total Incidents</div>
+                    <div class="admin-stat-val">{{ stats.total }}</div>
+                </div>
+
+                <div class="admin-stat-card open">
+                    <div class="admin-stat-label">Open / Unreviewed</div>
+                    <div class="admin-stat-val">{{ stats.open }}</div>
+                </div>
+
+                <div class="admin-stat-card progress">
+                    <div class="admin-stat-label">Under Review</div>
+                    <div class="admin-stat-val">{{ stats.under_review }}</div>
+                </div>
+
+                <div class="admin-stat-card action-taken" style="border-bottom-color: #8b5cf6;">
+                    <div class="admin-stat-label">Action Taken</div>
+                    <div class="admin-stat-val" style="color: #7c3aed;">{{ stats.action_taken }}</div>
+                </div>
+
+                <div class="admin-stat-card resolved">
+                    <div class="admin-stat-label">Closed Cases</div>
+                    <div class="admin-stat-val">{{ stats.closed }}</div>
+                </div>
+            </section>
+
+            <!-- Analytics Row -->
+            <section class="analytics-row">
+                <!-- Bar Chart: Incident Categories -->
+                <div class="chart-card">
+                    <div class="chart-card-title">Incident Category Distribution</div>
+                    <div class="chart-container">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Doughnut Chart: Statuses -->
+                <div class="chart-card">
+                    <div class="chart-card-title">Current Resolution Statuses</div>
+                    <div class="chart-container">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Committee Pending-Action Queue (Requirement C.3) -->
+            <section class="pending-queue-card" id="admin-pending-queue-section">
+                <div class="pending-queue-header">
+                    <h3 class="pending-queue-title">
+                        <svg class="svg-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        Committee Pending-Action Queue
+                        <span style="font-size: 12px; font-weight: 500; color: #78350f; margin-left: 6px;">(Open &gt; {{ reminder_open_hours }}h &bull; In Progress &gt; {{ reminder_in_progress_hours }}h)</span>
+                    </h3>
+                    <div>
+                        <span class="pending-queue-badge" id="pending-queue-count-badge">
+                            {{ pending_queue|length }} Required Action{{ 's' if pending_queue|length != 1 else '' }}
+                        </span>
+                    </div>
+                </div>
+                <div class="pending-queue-body">
+                    {% if pending_queue and pending_queue|length > 0 %}
+                    <table class="pending-queue-table">
+                        <thead>
+                            <tr>
+                                <th>Incident ID</th>
+                                <th>Category</th>
+                                <th>Current Status</th>
+                                <th>Elapsed Time</th>
+                                <th>Urgency</th>
+                                <th>Pending Reason</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in pending_queue %}
+                            <tr>
+                                <td style="font-weight: 700; color: var(--primary-dark);">#{{ item.id }}</td>
+                                <td>{{ item.incident_type }}</td>
+                                <td>
+                                    <span class="badge" style="background: #f1f5f9; color: #334155; font-size: 12px;">{{ item.status }}</span>
+                                </td>
+                                <td style="font-weight: 600; color: #b45309;">
+                                    {{ item.elapsed_hours }} hrs elapsed
+                                </td>
+                                <td>
+                                    <span class="urgency-badge {{ item.urgency|lower }}">{{ item.urgency }}</span>
+                                </td>
+                                <td style="color: #475569; font-size: 12px;">{{ item.reason }}</td>
+                                <td style="text-align: right;">
+                                    <a href="/admin/complaint/{{ item.id }}" class="btn-primary" style="padding: 5px 12px; font-size: 12px; text-decoration: none; display: inline-block;">
+                                        Review Incident
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="pending-empty-state">
+                        <svg class="svg-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        Queue Clear: All active incidents are currently within standard review and follow-up thresholds.
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Search and Filters Box -->
+            <section class="filter-box">
+                <div class="filter-left">
+                    <div class="filter-control-wrap">
+                        <label for="admin-filter-status">Status:</label>
+                        <select id="admin-filter-status" class="filter-select">
+                            <option value="">All Statuses</option>
+                            <option value="Open">Open</option>
+                            <option value="Under Review">Under Review</option>
+                            <option value="Action Taken">Action Taken</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-control-wrap">
+                        <label for="admin-filter-category">Incident Category:</label>
+                        <select id="admin-filter-category" class="filter-select">
+                            <option value="">All Categories</option>
+                            <option value="Verbal or emotional harassment">Verbal / Emotional</option>
+                            <option value="Physical ragging">Physical Ragging</option>
+                            <option value="Hostel hazing or coercion">Hostel Hazing</option>
+                            <option value="Cyber-ragging">Cyber-Ragging</option>
+                            <option value="Financial extortion">Financial Extortion</option>
+                            <option value="Other / unsure">Other / Unsure</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <input type="text" id="admin-search" class="filter-search" placeholder="Search ticket #, location, category, details...">
+                </div>
+            </section>
+
+            <!-- Complaints Table (Requirement 2) -->
+            <section class="container-box" style="padding: 20px; background: #ffffff; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); border: 1px solid var(--border);">
+                <div class="table-responsive">
+                    <table class="custom-table" id="complaints-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--border); text-align: left;">
+                                <th style="padding: 12px 14px;">Ticket Ref</th>
+                                <th style="padding: 12px 14px;">Submission Date</th>
+                                <th style="padding: 12px 14px;">Incident Category</th>
+                                <th style="padding: 12px 14px;">Incident Location</th>
+                                <th style="padding: 12px 14px;">Severity / Priority</th>
+                                <th style="padding: 12px 14px;">Current Status</th>
+                                <th style="padding: 12px 14px;">Assigned Committee</th>
+                                <th style="padding: 12px 14px; text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if complaints|length == 0 %}
+                                <tr>
+                                    <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                                        No ragging incident reports found in database.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                            {% for c in complaints %}
+                                <tr class="complaint-row"
+                                    data-status="{{ c.status }}"
+                                    data-category="{{ c.incident_type or c.department or 'Other / unsure' }}"
+                                    style="border-bottom: 1px solid var(--border);"
+                                >
+                                    <td style="font-weight: 700; padding: 12px 14px; color: var(--primary-dark);">
+                                        #{{ c.id }}
+                                        {% if c.is_confidential %}
+                                            <span title="Confidential Report" style="cursor: help; margin-left: 4px;"><svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 12px 14px; font-size: 13px; color: #475569; white-space: nowrap;">
+                                        {{ c.timestamp.strftime('%Y-%m-%d %H:%M') if c.timestamp else 'N/A' }}
+                                    </td>
+                                    <td style="padding: 12px 14px; font-weight: 500; font-size: 13px;">
+                                        {{ c.incident_type or c.department or 'Other / unsure' }}
+                                    </td>
+                                    <td style="padding: 12px 14px; font-size: 13px; color: #334155;">
+                                        {{ c.incident_location or 'N/A' }}
+                                    </td>
+                                    <td style="padding: 12px 14px;">
+                                        {% set sev = c.severity_level or c.priority or 'Medium' %}
+                                        <span class="prio-badge prio-{{ sev|lower|replace(' ', '-') }}">
+                                            {{ sev }}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 12px 14px;">
+                                        {% set st = c.status %}
+                                        {% if st == 'Open' %}
+                                            <span class="badge" style="background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; font-weight: 600; padding: 4px 10px; border-radius: 999px; font-size: 12px;">Open</span>
+                                        {% elif st == 'Under Review' or st == 'In Progress' or st == 'In-Progress' or st == 'Assigned' %}
+                                            <span class="badge" style="background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-weight: 600; padding: 4px 10px; border-radius: 999px; font-size: 12px;">Under Review</span>
+                                        {% elif st == 'Action Taken' %}
+                                            <span class="badge" style="background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; font-weight: 600; padding: 4px 10px; border-radius: 999px; font-size: 12px;">Action Taken</span>
+                                        {% elif st == 'Closed' or st == 'Resolved' %}
+                                            <span class="badge" style="background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; font-weight: 600; padding: 4px 10px; border-radius: 999px; font-size: 12px;">Closed</span>
+                                        {% else %}
+                                            <span class="badge">{{ st }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 12px 14px; font-size: 13px; color: #475569;">
+                                        <svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><line x1="2" y1="20" x2="22" y2="20"></line><line x1="4" y1="20" x2="4" y2="10"></line><line x1="10" y1="20" x2="10" y2="10"></line><line x1="14" y1="20" x2="14" y2="10"></line><line x1="20" y1="20" x2="20" y2="10"></line><polyline points="2 10 12 4 22 10"></polyline></svg>{{ c.committee_assigned or 'Anti-Ragging Squad' }}
+                                    </td>
+                                    <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
+                                        <button
+                                            type="button"
+                                            class="btn-primary"
+                                            style="padding: 6px 12px; font-size: 12px; cursor: pointer;"
+                                            onclick='openComplaintModal({
+                                                id: "{{ c.id }}",
+                                                student_email: "{{ c.student_email }}",
+                                                complaint_title: "{{ (c.complaint_title or 'Anti-Ragging Incident')|replace('"', '\"')|replace('
+', ' ')|replace('
+', '') }}",
+                                                complaint_text: "{{ (c.complaint_text or '')|replace('"', '\"')|replace('
+', ' ')|replace('
+', '') }}",
+                                                incident_type: "{{ (c.incident_type or c.department or 'Other / unsure')|replace('"', '\"') }}",
+                                                severity_level: "{{ (c.severity_level or c.priority or 'Medium')|replace('"', '\"') }}",
+                                                incident_date_time: "{{ (c.incident_date_time or 'N/A')|replace('"', '\"') }}",
+                                                incident_location: "{{ (c.incident_location or 'N/A')|replace('"', '\"') }}",
+                                                accused_details: "{{ (c.accused_details or 'None specified')|replace('"', '\"')|replace('
+', ' ')|replace('
+', '') }}",
+                                                witness_details: "{{ (c.witness_details or 'None specified')|replace('"', '\"')|replace('
+', ' ')|replace('
+', '') }}",
+                                                is_confidential: {{ 'true' if c.is_confidential else 'false' }},
+                                                committee_assigned: "{{ (c.committee_assigned or 'Anti-Ragging Squad')|replace('"', '\"') }}",
+                                                status: "{{ c.status }}",
+                                                admin_remarks: "{{ (c.admin_remarks or '')|replace('"', '\"')|replace('
+', ' ')|replace('
+', '') }}",
+                                                timestamp: "{{ c.timestamp.strftime('%Y-%m-%d %H:%M') if c.timestamp else 'N/A' }}"
+                                            })'
+                                        >
+                                            Review Details
+                                        </button>
+                                        <a href="{{ url_for('admin_complaint_details', complaint_id=c.id) }}"
+                                           class="btn-secondary"
+                                           style="padding: 6px 10px; font-size: 12px; text-decoration: none; margin-left: 4px; display: inline-block;"
+                                           title="Open Dedicated Details View">
+                                            <svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Complaint Manager Detail Modal (Requirement 4 & 6) -->
+        <div class="modal-overlay" id="complaint-modal">
+            <div class="modal-content-box" style="max-width: 780px;">
+                <div class="modal-header">
+                    <h3><svg class="svg-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -3px; margin-right: 6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>Anti-Ragging Case Review - Ticket <span id="modal-ticket-id">#0</span></h3>
+                    <button class="modal-close" onclick="closeComplaintModal()">×</button>
+                </div>
+
+                <form action="{{ url_for('admin') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="complaint_id" id="modal-form-id">
+
+                    <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+
+                        <!-- Confidentiality Warning Banner (Requirement 6) -->
+                        <div id="modal-confidential-warning" class="confidential-alert" style="display: none; background: #fff1f2; border: 1px solid #fecdd3; border-left: 4px solid #e11d48; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 18px;">
+                            <div style="font-weight: 700; color: #9f1239; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
+                                <span><svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span> STRICT CONFIDENTIALITY REQUESTED BY STUDENT
+                            </div>
+                            <div style="font-size: 13px; color: #be123c; line-height: 1.4;">
+                                <b>Warning to Reviewers:</b> In accordance with statutory UGC Anti-Ragging Regulations, the identity of the complainant, alleged perpetrators, and witness statements must remain strictly confidential within the Anti-Ragging Committee. Disclosing details outside formal proceedings is prohibited.
+                            </div>
+                        </div>
+
+                        <div id="modal-standard-notice" class="standard-alert" style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 18px; font-size: 13px; color: #166534;">
+                            <svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg> <b>Standard Incident Reporting:</b> Student did not request strict anonymity for this complaint.
+                        </div>
+
+                        <!-- Incident Metadata Grid -->
+                        <div class="modal-grid-2">
+                            <div class="modal-field">
+                                <div class="modal-field-lbl">Incident Category</div>
+                                <div class="modal-field-val" id="modal-category" style="font-weight: 600;">Loading...</div>
+                            </div>
+
+                            <div class="modal-field">
+                                <div class="modal-field-lbl">Severity / Priority</div>
+                                <div class="modal-field-val"><span id="modal-severity" class="prio-badge prio-medium">Medium</span></div>
+                            </div>
+                        </div>
+
+                        <div class="modal-grid-2">
+                            <div class="modal-field">
+                                <div class="modal-field-lbl">Incident Date & Time</div>
+                                <div class="modal-field-val" id="modal-datetime">Loading...</div>
+                            </div>
+
+                            <div class="modal-field">
+                                <div class="modal-field-lbl">Incident Location</div>
+                                <div class="modal-field-val" id="modal-location">Loading...</div>
+                            </div>
+                        </div>
+
+                        <div class="modal-grid-2">
+                            <div class="modal-field">
+                                <div class="modal-field-lbl">Assigned Body</div>
+                                <div class="modal-field-val" id="modal-committee">Anti-Ragging Squad</div>
+                            </div>
+
+                            <div class="modal-field">
+                                <div class="modal-field-lbl">Report Filed On</div>
+                                <div class="modal-field-val" id="modal-timestamp">Loading...</div>
+                            </div>
+                        </div>
+
+                        <!-- Incident Narrative (Requirement 4) -->
+                        <div class="modal-field" style="margin-bottom: 15px;">
+                            <div class="modal-field-lbl">Student Incident Report (Full Narrative)</div>
+                            <div class="modal-field-val" id="modal-text" style="white-space: pre-wrap; background-color: #f8fafc; padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 13px; line-height: 1.6; max-height: 180px; overflow-y: auto; color: #1e293b;">
+                                Loading...
+                            </div>
+                        </div>
+
+                        <!-- Accused Details (Requirement 4) -->
+                        <div class="modal-field" style="margin-bottom: 15px;">
+                            <div class="modal-field-lbl">Alleged Perpetrator(s) / Accused Details</div>
+                            <div class="modal-field-val" id="modal-accused" style="background-color: #f8fafc; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 13px; color: #1e293b;">
+                                Loading...
+                            </div>
+                        </div>
+
+                        <!-- Witness Details (Requirement 4) -->
+                        <div class="modal-field" style="margin-bottom: 15px;">
+                            <div class="modal-field-lbl">Witness Details</div>
+                            <div class="modal-field-val" id="modal-witnesses" style="background-color: #f8fafc; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 13px; color: #1e293b;">
+                                Loading...
+                            </div>
+                        </div>
+
+                        <!-- Reporting Student Email -->
+                        <div class="modal-field" style="margin-bottom: 15px;">
+                            <div class="modal-field-lbl">Reporting Student Contact</div>
+                            <div class="modal-field-val" id="modal-email" style="font-family: monospace;">
+                                Loading...
+                            </div>
+                        </div>
+
+                        <!-- Status and Committee Remarks Update (Requirement 5) -->
+                        <div style="border-top: 2px solid var(--border); margin-top: 20px; padding-top: 15px; background: #fafafa; padding: 16px; border-radius: var(--radius-sm);">
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label for="modal-status-select" style="font-weight: 700; color: var(--primary-dark); display: block; margin-bottom: 6px;">
+                                    Update Committee Action Status
+                                </label>
+                                <select id="modal-status-select" name="status" class="form-control" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px;">
+                                    <option value="Open">Open</option>
+                                    <option value="Under Review">Under Review</option>
+                                    <option value="Action Taken">Action Taken</option>
+                                    <option value="Closed">Closed</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="modal-remarks-textarea" style="font-weight: 700; color: var(--primary-dark); display: block; margin-bottom: 6px;">
+                                    Committee Notes & Action Taken Remarks
+                                </label>
+                                <textarea id="modal-remarks-textarea" name="admin_remarks" class="form-control" rows="3" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px;" placeholder="Document inquiry findings, squad dispatch, counseling actions, or hearing decisions..."></textarea>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" style="padding: 8px 16px;" onclick="closeComplaintModal()">Close</button>
+                        <button type="submit" class="btn-primary" style="padding: 8px 18px; font-weight: 600;">Save Case Updates</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        {% include 'components/footer.html' %}
+
+    </div>
+
+    <!-- Chart Configuration Script -->
+    <script>
+        const categoryData = [
+            {{ category_counts['Verbal or emotional harassment'] }},
+            {{ category_counts['Physical ragging'] }},
+            {{ category_counts['Hostel hazing or coercion'] }},
+            {{ category_counts['Cyber-ragging'] }},
+            {{ category_counts['Financial extortion'] }},
+            {{ category_counts['Other / unsure'] }}
+        ];
+
+        const statusData = [
+            {{ stats.open }},
+            {{ stats.under_review }},
+            {{ stats.action_taken }},
+            {{ stats.closed }}
+        ];
+
+        // 1. Bar Chart: Category Distribution
+        const ctxCat = document.getElementById('categoryChart').getContext('2d');
+        new Chart(ctxCat, {
+            type: 'bar',
+            data: {
+                labels: ['Verbal / Emotional', 'Physical', 'Hostel Hazing', 'Cyber-Ragging', 'Extortion', 'Other / Unsure'],
+                datasets: [{
+                    label: 'Incidents Reported',
+                    data: categoryData,
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(239, 68, 68, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(139, 92, 246, 0.8)',
+                        'rgba(236, 72, 153, 0.8)',
+                        'rgba(100, 116, 139, 0.8)'
+                    ],
+                    borderColor: [
+                        '#3b82f6',
+                        '#ef4444',
+                        '#f59e0b',
+                        '#8b5cf6',
+                        '#ec7299',
+                        '#64748b'
+                    ],
+                    borderWidth: 1.5,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+
+        // 2. Donut Chart: Status Distribution
+        const ctxStatus = document.getElementById('statusChart').getContext('2d');
+        new Chart(ctxStatus, {
+            type: 'doughnut',
+            data: {
+                labels: ['Open', 'Under Review', 'Action Taken', 'Closed'],
+                datasets: [{
+                    data: statusData,
+                    backgroundColor: [
+                        '#3b82f6',
+                        '#f59e0b',
+                        '#8b5cf6',
+                        '#10b981'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12,
+                            font: { family: 'Inter', size: 12 }
+                        }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+    </script>
+
+    <!-- Load scripts -->
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+
+    <!-- Admin Notification Client Logic -->
+    <script>
+        (function() {
+            var bell = document.getElementById("admin-notif-bell");
+            var dropdown = document.getElementById("admin-notif-dropdown");
+            var badge = document.getElementById("admin-notif-badge");
+            var markAllBtn = document.getElementById("admin-mark-all-btn");
+            var csrfToken = "{{ session.get('csrf_token', '') }}";
+
+            if (bell && dropdown) {
+                bell.addEventListener("click", function(e) {
+                    e.stopPropagation();
+                    var isExpanded = bell.getAttribute("aria-expanded") === "true";
+                    dropdown.classList.toggle("show");
+                    bell.setAttribute("aria-expanded", !isExpanded);
+                });
+
+                document.addEventListener("click", function(e) {
+                    if (!dropdown.contains(e.target) && !bell.contains(e.target)) {
+                        dropdown.classList.remove("show");
+                        bell.setAttribute("aria-expanded", "false");
+                    }
+                });
+            }
+
+            function updateBadge(count) {
+                if (!badge) return;
+                badge.textContent = count;
+                if (count <= 0) {
+                    badge.classList.add("hidden");
+                    if (markAllBtn) markAllBtn.style.display = "none";
+                } else {
+                    badge.classList.remove("hidden");
+                }
+            }
+
+            // Mark individual admin notification as read
+            document.querySelectorAll(".admin-read-btn").forEach(function(btn) {
+                btn.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var notifId = this.getAttribute("data-id");
+                    var item = document.getElementById("admin-notif-" + notifId);
+                    var self = this;
+
+                    fetch("/admin/notifications/" + notifId + "/read", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": csrfToken
+                        },
+                        body: JSON.stringify({ csrf_token: csrfToken })
+                    })
+                    .then(function(res) { return res.json(); })
+                    .then(function(data) {
+                        if (data.success) {
+                            if (item) item.classList.remove("unread");
+                            self.remove();
+                            updateBadge(data.unread_count);
+                        }
+                    })
+                    .catch(function(err) {
+                        console.error("Failed to mark admin notification read:", err);
+                    });
+                });
+            });
+
+            // Mark all admin notifications as read
+            if (markAllBtn) {
+                markAllBtn.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    fetch("/admin/notifications/mark_all_read", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": csrfToken
+                        },
+                        body: JSON.stringify({ csrf_token: csrfToken })
+                    })
+                    .then(function(res) { return res.json(); })
+                    .then(function(data) {
+                        if (data.success) {
+                            document.querySelectorAll("#admin-notif-list .notif-item.unread").forEach(function(el) {
+                                el.classList.remove("unread");
+                            });
+                            document.querySelectorAll(".admin-read-btn").forEach(function(btn) {
+                                btn.remove();
+                            });
+                            updateBadge(0);
+                        }
+                    })
+                    .catch(function(err) {
+                        console.error("Failed to mark all admin notifications read:", err);
+                    });
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

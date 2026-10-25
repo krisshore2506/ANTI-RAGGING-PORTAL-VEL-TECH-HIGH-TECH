@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Login - Anti-Ragging Portal</title>
+
+    <!-- Link styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body class="auth-body">
+
+    <div class="auth-card">
+        <!-- Brand Logo Block -->
+        <div class="auth-logo-block">
+            <a href="/" style="text-decoration: none;">
+                <div class="college-logo-container college-logo-container-lg">
+            <img src="{{ url_for('static', filename='images/veltech_college_logo.png') }}" alt="Vel Tech High Tech College Logo" class="college-logo">
+        </div>
+                <h2>Anti-Ragging Portal</h2>
+        <p>Vel Tech High Tech Engineering College</p>
+            </a>
+            <p>Vel Tech Student Grievance Portal</p>
+        </div>
+
+        <h3 class="auth-title"><svg class="svg-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -3px; margin-right: 6px;"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"></path></svg>Student Authentication</h3>
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(category_filter=["error"]) %}
+          {% if messages %}
+            <div class="alert alert-error" style="margin-bottom: 20px;">
+                <span><svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>{{ messages[0] }}</span>
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="/send_otp">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="form-group">
+                <label for="email-input">College Email ID</label>
+                <input
+                    type="email"
+                    id="email-input"
+                    class="form-control"
+                    name="email"
+                    placeholder="Enter your college email address"
+                    pattern="^[vV][hH][0-9]+@velhightech\.com$"
+                    title="Please enter your official college student email address."
+                    required
+                >
+            </div>
+
+            <div class="domain-hint">
+                <span><svg class="svg-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Access is restricted to authorized student accounts. Use your official college student email address to continue.</span>
+            </div>
+
+            <button type="submit" class="btn-primary" style="width: 100%;">Send Verification OTP</button>
+        </form>
+
+        <a href="/" class="back-to-home"><svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Back to Home</a>
+    </div>
+
+    {% include 'components/footer.html' %}
+</body>
+</html>
