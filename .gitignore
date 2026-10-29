@@ -48,3 +48,6 @@ Thumbs.db
 .idea/
 
 archive/
+
+# Vercel Deployment Artifacts
+.vercel/

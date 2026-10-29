@@ -22,6 +22,7 @@ PORTAL_ROOT = BASE_DIR
 SECRET_KEY = os.getenv("SECRET_KEY")
 FLASK_ENV = os.getenv("FLASK_ENV", "development").lower()
 IS_PRODUCTION = FLASK_ENV == "production" or os.getenv("ENV", "").lower() == "production"
+IS_VERCEL = os.getenv("VERCEL") == "1" or bool(os.getenv("VERCEL_ENV"))
 
 if not SECRET_KEY:
     raise RuntimeError(
@@ -133,17 +134,26 @@ if SQLALCHEMY_DATABASE_URI.startswith("sqlite"):
         "pool_pre_ping": True,
     }
 else:
+    _default_pool_size = "3" if IS_VERCEL else "10"
+    _default_max_overflow = "2" if IS_VERCEL else "5"
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
         "pool_recycle": int(os.getenv("DB_POOL_RECYCLE_SECONDS", "300")),
-        "pool_size": int(os.getenv("DB_POOL_SIZE", "10")),
-        "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "5")),
+        "pool_size": int(os.getenv("DB_POOL_SIZE", _default_pool_size)),
+        "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", _default_max_overflow)),
     }
 
 # Evidence Upload Configuration
 MAX_CONTENT_LENGTH = int(os.getenv("MAX_UPLOAD_SIZE_BYTES", 25 * 1024 * 1024))  # 25 MB
-EVIDENCE_UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads", "evidence")
-os.makedirs(EVIDENCE_UPLOAD_FOLDER, exist_ok=True)
+if IS_VERCEL:
+    EVIDENCE_UPLOAD_FOLDER = os.path.join("/tmp", "uploads", "evidence")
+else:
+    EVIDENCE_UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads", "evidence")
+
+try:
+    os.makedirs(EVIDENCE_UPLOAD_FOLDER, exist_ok=True)
+except OSError:
+    pass
 
 # Evidence Storage Backend Configuration ('local' or 'supabase')
 STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local").lower()
@@ -200,6 +210,7 @@ REMINDER_OPEN_HOURS = int(os.getenv("REMINDER_OPEN_HOURS", "24"))
 REMINDER_IN_PROGRESS_HOURS = int(os.getenv("REMINDER_IN_PROGRESS_HOURS", "72"))
 REMINDER_CHECK_INTERVAL_SECONDS = int(os.getenv("REMINDER_CHECK_INTERVAL_SECONDS", "3600"))
 DISABLE_REMINDER_SCHEDULER = os.getenv("DISABLE_REMINDER_SCHEDULER", "False").lower() in ("true", "1", "yes")
+CRON_SECRET = os.getenv("CRON_SECRET", "").strip()
 
 # Rate Limiting Constants
 MAX_TRACKING_ATTEMPTS = 5

@@ -9,9 +9,12 @@ from flask import (
     flash,
     jsonify
 )
+import os
 from backend.config.settings import (
     REMINDER_OPEN_HOURS,
     REMINDER_IN_PROGRESS_HOURS,
+    CRON_SECRET,
+    sanitize_db_error,
     logger
 )
 from backend.models.base import db
@@ -22,7 +25,8 @@ from backend.utils.email_sms import send_status_update_email
 from backend.services.notification_service import (
     create_notification,
     get_admin_pending_action_queue,
-    resolve_pending_reminders_for_complaint
+    resolve_pending_reminders_for_complaint,
+    process_pending_action_reminders
 )
 
 admin_bp = Blueprint("admin_bp", __name__)
@@ -396,3 +400,40 @@ def admin_pending_queue():
             "in_progress_hours": REMINDER_IN_PROGRESS_HOURS
         }
     })
+
+
+@admin_bp.route("/api/cron/reminders", methods=["GET", "POST"], endpoint="cron_reminders")
+def cron_reminders():
+    """
+    Authenticated scheduled endpoint for processing pending action reminders in serverless environments.
+    Accepts:
+      1. Vercel Cron header: 'Authorization: Bearer <CRON_SECRET>'
+      2. Authenticated Admin Session: session.get('admin_logged_in')
+    Returns JSON with the count of reminders generated.
+    """
+    from flask import current_app
+    cron_secret = (current_app.config.get("CRON_SECRET") or CRON_SECRET or os.getenv("CRON_SECRET", "")).strip()
+    auth_header = request.headers.get("Authorization", "").strip()
+    is_cron_authorized = False
+
+    if cron_secret and auth_header == f"Bearer {cron_secret}":
+        is_cron_authorized = True
+
+    is_admin_session = bool(session.get("admin_logged_in"))
+
+    if not is_cron_authorized and not is_admin_session:
+        logger.warning("Unauthorized attempt to access /api/cron/reminders from %s", request.remote_addr or "unknown")
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        count = process_pending_action_reminders()
+        logger.info("Cron reminder processing completed: %d new reminder(s) generated.", count)
+        return jsonify({
+            "status": "success",
+            "message": "Pending action reminders processed successfully.",
+            "reminders_generated": count
+        }), 200
+    except Exception as e:
+        safe_err = sanitize_db_error(e)
+        logger.error("Error during scheduled reminder execution: %s", safe_err)
+        return jsonify({"status": "error", "message": "Failed to process reminders."}), 500

@@ -86,8 +86,15 @@ def create_app(config_overrides=None):
         app.config["SESSION_SQLALCHEMY"] = db
         app.config.setdefault("SESSION_SQLALCHEMY_TABLE", "sessions")
     elif session_type_current == "filesystem":
-        session_dir = os.path.join(PORTAL_ROOT, "flask_session")
-        os.makedirs(session_dir, exist_ok=True)
+        is_serverless = os.getenv("VERCEL") == "1" or bool(os.getenv("VERCEL_ENV"))
+        if is_serverless:
+            session_dir = os.path.join("/tmp", "flask_session")
+        else:
+            session_dir = os.path.join(PORTAL_ROOT, "flask_session")
+        try:
+            os.makedirs(session_dir, exist_ok=True)
+        except OSError:
+            pass
         app.config.setdefault("SESSION_FILE_DIR", session_dir)
 
     # Initialize extensions
@@ -324,13 +331,14 @@ def create_app(config_overrides=None):
     # Reminder Scheduler Daemon
     # Strictly suppressed during testing, CLI commands, or when explicitly disabled
     # --------------------------------------------------------------------------
+    is_serverless = os.getenv("VERCEL") == "1" or bool(os.getenv("VERCEL_ENV"))
     disable_scheduler = app.config.get("DISABLE_REMINDER_SCHEDULER")
     if disable_scheduler is None:
-        disable_scheduler = os.getenv("DISABLE_REMINDER_SCHEDULER", "False")
+        disable_scheduler = os.getenv("DISABLE_REMINDER_SCHEDULER", "True" if is_serverless else "False")
     if isinstance(disable_scheduler, str):
         disable_scheduler = disable_scheduler.lower() in ("true", "1", "yes")
 
-    if not is_testing and not disable_scheduler and not is_cli_migration:
+    if not is_testing and not disable_scheduler and not is_cli_migration and not is_serverless:
         start_reminder_scheduler(app)
 
     return app

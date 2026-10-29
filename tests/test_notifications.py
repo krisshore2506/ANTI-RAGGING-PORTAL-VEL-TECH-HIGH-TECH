@@ -1651,5 +1651,58 @@ class TestNotificationDatabaseMigration(unittest.TestCase):
         self.assertTrue(os.path.exists(self.db_path))
 
 
+
+
+class TestVercelServerlessCronAndDeployment(unittest.TestCase):
+    def setUp(self):
+        from backend import create_app
+        from backend.models.base import db
+        self.app = create_app({
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "DISABLE_REMINDER_SCHEDULER": True,
+            "CRON_SECRET": "test_cron_secret_xyz"
+        })
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+        self.client = self.app.test_client()
+
+    def tearDown(self):
+        from backend.models.base import db
+        db.session.remove()
+        db.drop_all()
+        db.engine.dispose()
+        self.app_context.pop()
+
+    def test_cron_endpoint_unauthorized_without_secret(self):
+        resp = self.client.get("/api/cron/reminders")
+        self.assertEqual(resp.status_code, 401)
+        data = resp.get_json()
+        self.assertIn("error", data)
+
+    def test_cron_endpoint_authorized_with_bearer_token(self):
+        resp = self.client.get("/api/cron/reminders", headers={
+            "Authorization": "Bearer test_cron_secret_xyz"
+        })
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertEqual(data.get("status"), "success")
+        self.assertIn("reminders_generated", data)
+
+    def test_cron_endpoint_authorized_with_admin_session(self):
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+
+        resp = self.client.get("/api/cron/reminders")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertEqual(data.get("status"), "success")
+
+    def test_app_py_entrypoint_suppresses_scheduler(self):
+        from app import app as vercel_app
+        self.assertTrue(vercel_app.config.get("DISABLE_REMINDER_SCHEDULER"))
+
+
 if __name__ == "__main__":
     unittest.main()

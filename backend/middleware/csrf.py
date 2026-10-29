@@ -1,3 +1,4 @@
+import os
 import secrets
 from flask import session, request, flash, render_template, jsonify, current_app
 from backend.config.settings import logger
@@ -24,6 +25,13 @@ def validate_csrf():
     """
     if request.method in ("GET", "HEAD", "OPTIONS"):
         return None
+
+    # Exempt authorized serverless cron invocations from CSRF
+    if request.path == "/api/cron/reminders":
+        cron_secret = os.getenv("CRON_SECRET", "").strip()
+        auth_header = request.headers.get("Authorization", "").strip()
+        if cron_secret and auth_header == f"Bearer {cron_secret}":
+            return None
 
     # Exempt automated testing when explicitly disabled
     if current_app.config.get("TESTING") and not current_app.config.get("CSRF_ENABLED", True):
