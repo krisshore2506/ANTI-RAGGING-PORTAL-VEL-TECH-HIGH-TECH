@@ -1,6 +1,7 @@
 # Environments and Secrets
 .env
 .env.*
+!.env.example
 venv/
 .venv/
 env/
@@ -17,6 +18,10 @@ instance/
 
 # Local Databases
 *.db
+*.db-journal
+*.db-wal
+*.db-shm
+*-journal
 *.sqlite
 *.sqlite3
 *.sqbpro

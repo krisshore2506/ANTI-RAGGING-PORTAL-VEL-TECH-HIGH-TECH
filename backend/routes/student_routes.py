@@ -10,14 +10,15 @@ from flask import (
     session,
     flash,
     jsonify,
-    send_from_directory
+    send_from_directory,
+    send_file
 )
 from backend.config.settings import (
     EVIDENCE_UPLOAD_FOLDER,
     logger
 )
 from backend.models.base import db
-from backend.models.complaint import Complaint, ComplaintEvidence
+from backend.models.complaint import Complaint, ComplaintEvidence, ComplaintStatusHistory
 from backend.models.notification import Notification
 from backend.utils.security import (
     get_client_ip,
@@ -28,7 +29,7 @@ from backend.utils.triage import (
     determine_incident_category,
     suggest_provisional_severity
 )
-from backend.services.evidence_service import save_uploaded_evidence, get_evidence_upload_folder
+from backend.services.evidence_service import save_uploaded_evidence, get_evidence_upload_folder, fetch_evidence_file_stream
 from backend.services.notification_service import create_notification
 from backend.middleware.rate_limit import (
     check_tracking_rate_limit,
@@ -137,8 +138,10 @@ def predict():
 
     initial_status = "Open"
     committee_assigned = "Anti-Ragging Committee"
+    complaint_ref = f"ARC-{datetime.utcnow().strftime('%Y%m%d')}-{secrets.token_hex(3).upper()}"
 
     complaint = Complaint(
+        complaint_reference=complaint_ref,
         student_email=email,
         complaint_title=complaint_title,
         complaint_text=complaint_text,
@@ -160,6 +163,18 @@ def predict():
 
     db.session.add(complaint)
     db.session.flush()
+
+    # Record initial audit entry in status history
+    initial_audit = ComplaintStatusHistory(
+        complaint_id=complaint.id,
+        previous_status=None,
+        new_status=initial_status,
+        action_type="submitted",
+        actor_role="student",
+        actor_email=email,
+        remarks=f"Incident report submitted. Category: {incident_category}, Priority: {student_priority}."
+    )
+    db.session.add(initial_audit)
 
     saved_file_paths = []
     try:
@@ -273,24 +288,33 @@ def access_evidence(evidence_id):
 
     safe_storage_name = os.path.basename(evidence.storage_filename)
     file_path = os.path.join(get_evidence_upload_folder(), safe_storage_name)
-
-    if not os.path.exists(file_path):
-        logger.warning("Evidence file missing from disk: %s", file_path)
-        return render_template(
-            "error.html",
-            error_title="File Unavailable",
-            error_heading="Evidence File Not Found",
-            error_message="The evidence file could not be located on the server storage."
-        ), 404
-
     is_inline_type = evidence.file_type in ["photo", "audio", "video"]
-    return send_from_directory(
-        directory=get_evidence_upload_folder(),
-        path=safe_storage_name,
-        mimetype=evidence.mime_type,
-        as_attachment=not is_inline_type,
-        download_name=evidence.original_filename
-    )
+
+    if os.path.exists(file_path):
+        return send_from_directory(
+            directory=get_evidence_upload_folder(),
+            path=safe_storage_name,
+            mimetype=evidence.mime_type,
+            as_attachment=not is_inline_type,
+            download_name=evidence.original_filename
+        )
+
+    stream, _ = fetch_evidence_file_stream(safe_storage_name)
+    if stream is not None:
+        return send_file(
+            stream,
+            mimetype=evidence.mime_type,
+            as_attachment=not is_inline_type,
+            download_name=evidence.original_filename
+        )
+
+    logger.warning("Evidence file missing from disk and storage: %s", file_path)
+    return render_template(
+        "error.html",
+        error_title="File Unavailable",
+        error_heading="Evidence File Not Found",
+        error_message="The evidence file could not be located on the server storage."
+    ), 404
 
 
 @student_bp.route("/track", methods=["GET", "POST"], endpoint="track")

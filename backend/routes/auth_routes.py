@@ -1,14 +1,17 @@
+import os
 import time
 import secrets
+import smtplib
 from flask import Blueprint, request, render_template, redirect, url_for, session, flash
 from backend.config.settings import (
     STUDENT_EMAIL_REGEX,
+    SMTP_EMAIL,
     ADMIN_EMAIL,
     ADMIN_PASSWORD,
     logger
 )
 from backend.utils.security import generate_secure_otp, get_client_ip
-from backend.utils.email_sms import send_otp_email
+from backend.utils.email_sms import send_otp_email, mask_email_address
 from backend.middleware.rate_limit import (
     check_admin_rate_limit,
     record_admin_login_failure,
@@ -64,6 +67,29 @@ def send_otp():
     try:
         _dispatch_otp_email(email, otp)
         return redirect(url_for("verify_otp_page"))
+    except smtplib.SMTPAuthenticationError as auth_err:
+        err_msg = auth_err.smtp_error.decode("utf-8", errors="replace") if hasattr(auth_err, "smtp_error") and isinstance(auth_err.smtp_error, bytes) else str(auth_err)
+        logger.error(
+            "SMTP Authentication Failed (code %s): Mail server rejected credentials for sender '%s'. "
+            "Please verify that SMTP_EMAIL is correct and a valid Google App Password is set in .env: %s",
+            getattr(auth_err, "smtp_code", "535"),
+            mask_email_address(SMTP_EMAIL),
+            err_msg
+        )
+        flash("Unable to send verification code due to an email authentication issue. Please contact the administrator.", "error")
+        return render_template("student_login.html")
+    except smtplib.SMTPRecipientsRefused as recip_err:
+        logger.error("SMTP Recipient Refused: Mail server rejected destination '%s': %s", email, str(recip_err))
+        flash("Unable to send verification code to this email address. Please verify your student email.", "error")
+        return render_template("student_login.html")
+    except (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, TimeoutError, ConnectionError, OSError) as conn_err:
+        logger.error("SMTP Connection Error (%s): %s", type(conn_err).__name__, str(conn_err))
+        flash("Unable to send verification code. Please check server connectivity or try again shortly.", "error")
+        return render_template("student_login.html")
+    except ValueError as val_err:
+        logger.error("SMTP Configuration Error: %s", str(val_err))
+        flash("Unable to send verification code: email service is not configured. Please contact the administrator.", "error")
+        return render_template("student_login.html")
     except Exception as e:
         logger.error("Failed to deliver OTP email: %s", str(e))
         flash("Unable to send verification code. Please check server connectivity or try again shortly.", "error")
@@ -135,6 +161,21 @@ def resend_otp():
     try:
         _dispatch_otp_email(email, new_otp)
         flash("A new verification code has been sent to your email (valid for 60 seconds).", "success")
+    except smtplib.SMTPAuthenticationError as auth_err:
+        err_msg = auth_err.smtp_error.decode("utf-8", errors="replace") if hasattr(auth_err, "smtp_error") and isinstance(auth_err.smtp_error, bytes) else str(auth_err)
+        logger.error(
+            "SMTP Authentication Failed during resend (code %s): Mail server rejected credentials for sender '%s': %s",
+            getattr(auth_err, "smtp_code", "535"),
+            mask_email_address(SMTP_EMAIL),
+            err_msg
+        )
+        flash("Unable to resend verification code due to an email authentication issue. Please contact the administrator.", "error")
+    except smtplib.SMTPRecipientsRefused as recip_err:
+        logger.error("SMTP Recipient Refused during resend: Mail server rejected destination '%s': %s", email, str(recip_err))
+        flash("Unable to resend verification code to this email address. Please verify your student email.", "error")
+    except (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, TimeoutError, ConnectionError, OSError) as conn_err:
+        logger.error("SMTP Connection Error during resend (%s): %s", type(conn_err).__name__, str(conn_err))
+        flash("Unable to resend verification code. Please check server connectivity or try again shortly.", "error")
     except Exception as e:
         logger.error("Failed to resend OTP email: %s", str(e))
         flash("Unable to resend verification code. Please try again shortly.", "error")
@@ -161,8 +202,8 @@ def admin_login():
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "").strip()
 
-        configured_email = ADMIN_EMAIL or "admin@velhightech.com"
-        configured_password = ADMIN_PASSWORD or "veltech@arc2026"
+        configured_email = os.getenv("ADMIN_EMAIL") or ADMIN_EMAIL or "admin@velhightech.com"
+        configured_password = os.getenv("ADMIN_PASSWORD") or ADMIN_PASSWORD or "veltech@arc2026"
 
         email_match = secrets.compare_digest(str(email).lower(), str(configured_email).lower())
         password_match = secrets.compare_digest(str(password), str(configured_password))

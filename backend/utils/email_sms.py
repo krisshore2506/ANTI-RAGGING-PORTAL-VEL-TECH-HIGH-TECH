@@ -9,6 +9,12 @@ from twilio.rest import Client
 from backend.config.settings import (
     SMTP_EMAIL,
     SMTP_PASSWORD,
+    SMTP_HOST,
+    SMTP_PORT,
+    SMTP_USE_SSL,
+    SMTP_USE_TLS,
+    SMTP_TIMEOUT,
+    DEV_SIMULATE_EMAIL,
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
     TWILIO_PHONE_NUMBER,
@@ -42,6 +48,85 @@ def send_sms_simulated(complaint_id, to_number, message):
     db.session.commit()
 
 
+def mask_email_address(email_str):
+    """Safely masks an email address for logging without leaking the full username."""
+    if not email_str or "@" not in str(email_str):
+        return "[UNCONFIGURED]"
+    parts = str(email_str).strip().split("@", 1)
+    user, domain = parts[0], parts[1]
+    if len(user) <= 2:
+        masked_user = user[0] + "*"
+    else:
+        masked_user = user[:2] + "***" + user[-1]
+    return f"{masked_user}@{domain}"
+
+
+def _deliver_smtp_message(msg):
+    """
+    Delivers an email message using configured SMTP settings.
+    Supports STARTTLS (port 587) and SSL (port 465) with automatic fallback.
+    Performs robust credential handling and diagnostic classification without leaking secrets.
+    """
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        raise ValueError("SMTP_EMAIL or SMTP_PASSWORD is not configured.")
+
+    clean_email = str(SMTP_EMAIL).strip()
+    clean_password = str(SMTP_PASSWORD).strip()
+    host = SMTP_HOST or "smtp.gmail.com"
+    port = SMTP_PORT or 587
+    timeout = SMTP_TIMEOUT or 15
+
+    def _attempt_send(use_ssl, target_port):
+        if use_ssl:
+            with smtplib.SMTP_SSL(host, target_port, timeout=timeout) as server:
+                server.ehlo()
+                _login_and_dispatch(server, clean_email, clean_password, msg)
+        else:
+            with smtplib.SMTP(host, target_port, timeout=timeout) as server:
+                server.ehlo()
+                if SMTP_USE_TLS or target_port == 587:
+                    server.starttls()
+                    server.ehlo()
+                _login_and_dispatch(server, clean_email, clean_password, msg)
+
+    def _login_and_dispatch(server, user, password, message):
+        try:
+            server.login(user, password)
+        except smtplib.SMTPServerDisconnected as s_err:
+            # Gmail may drop the socket immediately during AUTH PLAIN if credentials
+            # are invalid or PLAIN is rejected. Attempt AUTH LOGIN fallback:
+            try:
+                server.user = user
+                server.password = password
+                code, resp = server.auth("LOGIN", server.auth_login)
+                if code not in (235, 503):
+                    raise smtplib.SMTPAuthenticationError(code, resp)
+            except smtplib.SMTPAuthenticationError:
+                raise
+            except Exception:
+                raise s_err
+        server.send_message(message)
+
+    primary_ssl = SMTP_USE_SSL or port == 465
+
+    try:
+        _attempt_send(primary_ssl, port)
+    except (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, TimeoutError, OSError) as conn_err:
+        # Fallback between 587 and 465 if using smtp.gmail.com
+        if host == "smtp.gmail.com" and port in (587, 465):
+            fallback_ssl = not primary_ssl
+            fallback_port = 465 if fallback_ssl else 587
+            logger.warning(
+                "Primary SMTP attempt on port %s (%s) failed with %s: %s. Attempting fallback via port %s (%s)...",
+                port, "SSL" if primary_ssl else "STARTTLS", type(conn_err).__name__, str(conn_err),
+                fallback_port, "SSL" if fallback_ssl else "STARTTLS"
+            )
+            _attempt_send(fallback_ssl, fallback_port)
+            logger.info("Fallback SMTP connection succeeded on port %s.", fallback_port)
+            return
+        raise conn_err
+
+
 def send_otp_email(email, otp):
     """
     Sends a responsive, professional HTML and plain-text verification OTP email to the student.
@@ -52,7 +137,7 @@ def send_otp_email(email, otp):
 
     safe_otp = html.escape(str(otp).strip())
 
-    if os.getenv("DEV_SIMULATE_EMAIL", "False").lower() in ("true", "1"):
+    if DEV_SIMULATE_EMAIL or os.getenv("DEV_SIMULATE_EMAIL", "False").lower() in ("true", "1"):
         logger.info("[DEV SIMULATED EMAIL] Generated OTP %s for %s", safe_otp, email)
         otp_file = os.getenv("DEV_OTP_FILE")
         if otp_file:
@@ -167,12 +252,7 @@ def send_otp_email(email, otp):
     msg.attach(MIMEText(plain_text, "plain", "utf-8"))
     msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-    with smtplib.SMTP("smtp.gmail.com", 587, timeout=20) as server:
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
-        server.login(SMTP_EMAIL, SMTP_PASSWORD)
-        server.send_message(msg)
+    _deliver_smtp_message(msg)
 
     logger.info("OTP verification email successfully dispatched to student.")
 
@@ -286,11 +366,6 @@ def send_status_update_email(student_email, complaint_id, new_status):
         msg.attach(MIMEText(plain_text, "plain", "utf-8"))
         msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=20) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(SMTP_EMAIL, SMTP_PASSWORD)
-            server.send_message(msg)
+        _deliver_smtp_message(msg)
     except Exception as e:
         logger.error("Failed to send status update email: %s", str(e))

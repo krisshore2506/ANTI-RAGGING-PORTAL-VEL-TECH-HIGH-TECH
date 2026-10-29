@@ -21,6 +21,14 @@ from backend.config.settings import (
     STUDENT_EMAIL_REGEX,
     SMTP_EMAIL,
     SMTP_PASSWORD,
+    EMAIL_USER,
+    EMAIL_PASS,
+    SMTP_HOST,
+    SMTP_PORT,
+    SMTP_USE_SSL,
+    SMTP_USE_TLS,
+    SMTP_TIMEOUT,
+    DEV_SIMULATE_EMAIL,
     ADMIN_EMAIL,
     ADMIN_PASSWORD,
     MAX_TRACKING_ATTEMPTS,
@@ -30,10 +38,14 @@ from backend.config.settings import (
     REMINDER_OPEN_HOURS,
     REMINDER_IN_PROGRESS_HOURS,
     REMINDER_CHECK_INTERVAL_SECONDS,
+    normalize_database_url,
+    mask_database_url,
+    sanitize_db_error,
     logger
 )
-from backend.models.base import db
-from backend.models.complaint import Complaint, ComplaintEvidence
+from backend.models.base import db, migrate
+from backend.models.complaint import Complaint, ComplaintEvidence, ComplaintStatusHistory
+from backend.models.committee import CommitteeMember, InvestigationAction
 from backend.models.notification import Notification
 from backend.models.audit import Cleaner, CallLog, SMSLog
 from backend.middleware.csrf import (

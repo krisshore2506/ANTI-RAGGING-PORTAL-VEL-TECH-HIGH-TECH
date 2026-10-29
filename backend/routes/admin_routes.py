@@ -15,7 +15,7 @@ from backend.config.settings import (
     logger
 )
 from backend.models.base import db
-from backend.models.complaint import Complaint
+from backend.models.complaint import Complaint, ComplaintStatusHistory
 from backend.models.notification import Notification
 from backend.models.audit import SMSLog, CallLog
 from backend.utils.email_sms import send_status_update_email
@@ -58,11 +58,27 @@ def admin():
             target_status = status_map.get(new_status, new_status)
 
             try:
+                old_status = complaint.status
                 if target_status in valid_statuses:
                     complaint.status = target_status
+                if target_status in ["Closed", "Resolved"]:
+                    complaint.closed_at = datetime.utcnow()
 
                 complaint.admin_remarks = remarks
                 complaint.timestamp = datetime.utcnow()
+                complaint.updated_at = datetime.utcnow()
+
+                # Record status history audit
+                status_audit = ComplaintStatusHistory(
+                    complaint_id=complaint.id,
+                    previous_status=old_status,
+                    new_status=complaint.status,
+                    action_type="status_update" if old_status != complaint.status else "remarks_updated",
+                    actor_role="admin",
+                    actor_email=session.get("admin_email", "admin@velhightech.com"),
+                    remarks=remarks or f"Status changed from {old_status} to {complaint.status}."
+                )
+                db.session.add(status_audit)
 
                 # Atomically resolve stale pending reminders for this complaint
                 resolve_pending_reminders_for_complaint(complaint.id, resolved_at=complaint.timestamp, commit=False)
@@ -182,10 +198,27 @@ def admin_complaint_details(complaint_id):
         target_status = status_map.get(new_status, new_status)
 
         try:
+            old_status = complaint.status
             if target_status in valid_statuses:
                 complaint.status = target_status
+            if target_status in ["Closed", "Resolved"]:
+                complaint.closed_at = datetime.utcnow()
+
             complaint.admin_remarks = remarks
             complaint.timestamp = datetime.utcnow()
+            complaint.updated_at = datetime.utcnow()
+
+            # Record status history audit
+            status_audit = ComplaintStatusHistory(
+                complaint_id=complaint.id,
+                previous_status=old_status,
+                new_status=complaint.status,
+                action_type="status_update" if old_status != complaint.status else "remarks_updated",
+                actor_role="admin",
+                actor_email=session.get("admin_email", "admin@velhightech.com"),
+                remarks=remarks or f"Status changed from {old_status} to {complaint.status}."
+            )
+            db.session.add(status_audit)
 
             # Atomically resolve stale pending reminders for this complaint
             resolve_pending_reminders_for_complaint(complaint.id, resolved_at=complaint.timestamp, commit=False)

@@ -1,3 +1,4 @@
+import sys
 import os
 import re
 import jinja2
@@ -8,6 +9,8 @@ from sqlalchemy import inspect as sa_inspect, text as sa_text
 from backend.config.settings import (
     PORTAL_ROOT,
     SECRET_KEY,
+    IS_PRODUCTION,
+    FLASK_ENV,
     SESSION_TYPE,
     SESSION_PERMANENT,
     SESSION_USE_SIGNER,
@@ -16,10 +19,13 @@ from backend.config.settings import (
     SESSION_COOKIE_SECURE,
     SQLALCHEMY_DATABASE_URI,
     SQLALCHEMY_TRACK_MODIFICATIONS,
+    SQLALCHEMY_ENGINE_OPTIONS,
     MAX_CONTENT_LENGTH,
+    mask_database_url,
+    sanitize_db_error,
     logger
 )
-from backend.models.base import db
+from backend.models.base import db, migrate
 from backend.middleware.csrf import inject_csrf_token, validate_csrf
 from backend.services.evidence_service import format_file_size
 from backend.services.notification_service import start_reminder_scheduler
@@ -58,14 +64,36 @@ def create_app(config_overrides=None):
     app.config["SESSION_COOKIE_SECURE"] = SESSION_COOKIE_SECURE
     app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = SQLALCHEMY_TRACK_MODIFICATIONS
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = SQLALCHEMY_ENGINE_OPTIONS
     app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 
     if config_overrides:
         app.config.update(config_overrides)
 
-    # Session & Database Initialization
-    Session(app)
+    # Sanitize engine options for SQLite connections (SQLite does not accept pool_size/max_overflow)
+    effective_uri = str(app.config.get("SQLALCHEMY_DATABASE_URI", ""))
+    if effective_uri.startswith("sqlite"):
+        opts = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS") or {})
+        opts.pop("pool_size", None)
+        opts.pop("max_overflow", None)
+        opts.pop("pool_recycle", None)
+        opts.setdefault("pool_pre_ping", True)
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = opts
+
+    # Session storage configuration
+    session_type_current = str(app.config.get("SESSION_TYPE", "filesystem")).lower()
+    if session_type_current == "sqlalchemy":
+        app.config["SESSION_SQLALCHEMY"] = db
+        app.config.setdefault("SESSION_SQLALCHEMY_TABLE", "sessions")
+    elif session_type_current == "filesystem":
+        session_dir = os.path.join(PORTAL_ROOT, "flask_session")
+        os.makedirs(session_dir, exist_ok=True)
+        app.config.setdefault("SESSION_FILE_DIR", session_dir)
+
+    # Initialize extensions
     db.init_app(app)
+    migrate.init_app(app, db)
+    Session(app)
 
     # Context Processors & Middleware
     app.context_processor(inject_csrf_token)
@@ -111,139 +139,198 @@ def create_app(config_overrides=None):
 
     app.url_build_error_handlers.append(_url_build_error_fallback)
 
-    # Database Schema Initialization & Migration
-    with app.app_context():
-        db.create_all()
-        try:
-            with db.engine.connect() as connection:
-                # Direct SQL inspection to prevent inspector caching issues
-                if db.engine.dialect.name == "sqlite":
-                    tables = [row[0] for row in connection.execute(sa_text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()]
-                else:
-                    tables = sa_inspect(connection).get_table_names()
+    # --------------------------------------------------------------------------
+    # Database Initialization & Read-Only Production Verification
+    # --------------------------------------------------------------------------
+    db_uri = str(app.config.get("SQLALCHEMY_DATABASE_URI", ""))
+    is_sqlite = db_uri.startswith("sqlite")
+    is_testing = bool(app.config.get("TESTING", False))
 
-                if "complaint" in tables:
-                    if db.engine.dialect.name == "sqlite":
-                        columns = [row[1] for row in connection.execute(sa_text("PRAGMA table_info(complaint)")).fetchall()]
-                    else:
-                        columns = [col["name"] for col in sa_inspect(connection).get_columns("complaint")]
+    def _is_migration_cli():
+        args = [a.lower() for a in sys.argv] if sys.argv else []
+        script = os.path.basename(sys.argv[0]).lower() if sys.argv else ""
+        if any(tool in script for tool in ("alembic",)):
+            return True
+        if any(arg in args for arg in ("db", "upgrade", "downgrade", "migrate", "stamp", "revision")):
+            return True
+        return False
 
-                    column_defs = {
-                        "complaint_title": "VARCHAR(150)",
-                        "admin_remarks": "TEXT",
-                        "incident_type": "VARCHAR(100)",
-                        "severity_level": "VARCHAR(50) DEFAULT 'Medium'",
-                        "incident_date_time": "VARCHAR(100)",
-                        "incident_location": "VARCHAR(150)",
-                        "accused_details": "TEXT",
-                        "witness_details": "TEXT",
-                        "is_confidential": "BOOLEAN DEFAULT 0",
-                        "tracking_token": "VARCHAR(64)",
-                        "committee_assigned": "VARCHAR(100)"
-                    }
-                    for col_name, col_type in column_defs.items():
-                        if col_name not in columns:
-                            connection.execute(sa_text(f"ALTER TABLE complaint ADD COLUMN {col_name} {col_type}"))
+    is_cli_migration = _is_migration_cli()
 
-                if "notification" in tables:
-                    if db.engine.dialect.name == "sqlite":
-                        notif_columns = [row[1] for row in connection.execute(sa_text("PRAGMA table_info('notification')")).fetchall()]
-                    else:
-                        notif_columns = [col["name"] for col in sa_inspect(connection).get_columns("notification")]
+    if is_sqlite and not IS_PRODUCTION:
+        # ----------------------------------------------------------------------
+        # SQLite Development & Test Environment Handler
+        # Preserves isolated unit test fixtures and dev auto-creation.
+        # ----------------------------------------------------------------------
+        skip_schema_init = app.config.get("SKIP_SCHEMA_INIT")
+        if skip_schema_init is None:
+            skip_schema_init = os.getenv("SKIP_SCHEMA_INIT", "False").lower() in ("true", "1", "yes")
 
-                    notif_column_defs = {
-                        "is_resolved": "BOOLEAN DEFAULT 0",
-                        "resolved_at": "DATETIME"
-                    }
-                    for col_name, col_type in notif_column_defs.items():
-                        if col_name not in notif_columns:
-                            connection.execute(sa_text(f"ALTER TABLE notification ADD COLUMN {col_name} {col_type}"))
+        if not skip_schema_init and not is_cli_migration:
+            with app.app_context():
+                try:
+                    db.create_all()
+                    with db.engine.connect() as connection:
+                        tables = [row[0] for row in connection.execute(sa_text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()]
 
-                    # Inspect all unique indexes and constraints on notification.dedup_key in SQLite
-                    # and relax them to non-unique so historical resolved reminders can coexist with new reminders.
-                    if db.engine.dialect.name == "sqlite":
-                        notif_columns = [row[1] for row in connection.execute(sa_text("PRAGMA table_info('notification')")).fetchall()]
-                        idx_list = connection.execute(sa_text("PRAGMA index_list('notification')")).fetchall()
-                        needs_rebuild = False
-                        unique_dedup_standalone_indexes = []
+                        if "complaint" in tables:
+                            columns = [row[1] for row in connection.execute(sa_text("PRAGMA table_info(complaint)")).fetchall()]
+                            column_defs = {
+                                "complaint_title": "VARCHAR(150)",
+                                "admin_remarks": "TEXT",
+                                "incident_type": "VARCHAR(100)",
+                                "severity_level": "VARCHAR(50) DEFAULT 'Medium'",
+                                "incident_date_time": "VARCHAR(100)",
+                                "incident_location": "VARCHAR(150)",
+                                "accused_details": "TEXT",
+                                "witness_details": "TEXT",
+                                "is_confidential": "BOOLEAN DEFAULT 0",
+                                "tracking_token": "VARCHAR(64)",
+                                "committee_assigned": "VARCHAR(100)",
+                                "complaint_reference": "VARCHAR(50)",
+                                "complainant_name": "VARCHAR(100)",
+                                "complainant_phone": "VARCHAR(20)",
+                                "is_anonymous": "BOOLEAN DEFAULT 0",
+                                "resolution_details": "TEXT",
+                                "updated_at": "DATETIME",
+                                "closed_at": "DATETIME",
+                                "assigned_investigator_id": "INTEGER"
+                            }
+                            for col_name, col_type in column_defs.items():
+                                if col_name not in columns:
+                                    connection.execute(sa_text(f"ALTER TABLE complaint ADD COLUMN {col_name} {col_type}"))
 
-                        for idx in idx_list:
-                            idx_name = idx[1]
-                            is_unique = bool(idx[2])
-                            origin = idx[3]
+                        if "notification" in tables:
+                            notif_columns = [row[1] for row in connection.execute(sa_text("PRAGMA table_info('notification')")).fetchall()]
+                            notif_column_defs = {
+                                "is_resolved": "BOOLEAN DEFAULT 0",
+                                "resolved_at": "DATETIME"
+                            }
+                            for col_name, col_type in notif_column_defs.items():
+                                if col_name not in notif_columns:
+                                    connection.execute(sa_text(f"ALTER TABLE notification ADD COLUMN {col_name} {col_type}"))
 
-                            if is_unique:
-                                idx_info = connection.execute(sa_text(f"PRAGMA index_info('{idx_name}')")).fetchall()
-                                indexed_cols = [row[2] for row in idx_info]
-                                if indexed_cols == ['dedup_key']:
-                                    if origin == 'u':
-                                        # Autoindex from table or column UNIQUE constraint: requires table rebuild
-                                        needs_rebuild = True
+                            # Relax dedup_key unique indexes in SQLite for test compatibility
+                            idx_list = connection.execute(sa_text("PRAGMA index_list('notification')")).fetchall()
+                            needs_rebuild = False
+                            unique_dedup_standalone_indexes = []
+
+                            for idx in idx_list:
+                                idx_name = idx[1]
+                                is_unique = bool(idx[2])
+                                origin = idx[3]
+
+                                if is_unique:
+                                    idx_info = connection.execute(sa_text(f"PRAGMA index_info('{idx_name}')")).fetchall()
+                                    indexed_cols = [row[2] for row in idx_info]
+                                    if indexed_cols == ['dedup_key']:
+                                        if origin == 'u':
+                                            needs_rebuild = True
+                                        else:
+                                            unique_dedup_standalone_indexes.append(idx_name)
+
+                            for u_idx in unique_dedup_standalone_indexes:
+                                connection.execute(sa_text(f'DROP INDEX IF EXISTS "{u_idx}"'))
+
+                            if needs_rebuild:
+                                non_dedup_index_sqls = []
+                                raw_indexes = connection.execute(sa_text(
+                                    "SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name='notification' AND sql IS NOT NULL"
+                                ))
+                                for idx_name, idx_sql in raw_indexes:
+                                    idx_cols = [row[2] for row in connection.execute(sa_text(f"PRAGMA index_info('{idx_name}')")).fetchall()]
+                                    if idx_cols != ['dedup_key']:
+                                        non_dedup_index_sqls.append(idx_sql)
+
+                                create_sql = connection.execute(sa_text(
+                                    "SELECT sql FROM sqlite_master WHERE type='table' AND name='notification'"
+                                )).fetchone()[0]
+
+                                lines = create_sql.splitlines()
+                                new_lines = []
+                                for line in lines:
+                                    if re.search(r'\bUNIQUE\s*\(\s*["`\[]?dedup_key["`\]]?\s*\)', line, re.IGNORECASE):
+                                        continue
+                                    elif re.search(r'\bdedup_key\b', line, re.IGNORECASE) and not re.search(r'^\s*CONSTRAINT\b', line, re.IGNORECASE):
+                                        line = re.sub(r'\bUNIQUE\b', '', line, flags=re.IGNORECASE)
+                                        new_lines.append(line)
                                     else:
-                                        # Standalone unique index: can be dropped directly
-                                        unique_dedup_standalone_indexes.append(idx_name)
+                                        new_lines.append(line)
 
-                        # Drop standalone unique indexes on dedup_key regardless of name
-                        for u_idx in unique_dedup_standalone_indexes:
-                            connection.execute(sa_text(f'DROP INDEX IF EXISTS "{u_idx}"'))
+                                new_sql = "\n".join(new_lines)
+                                new_sql = re.sub(r',\s*\)', '\n)', new_sql)
 
-                        if needs_rebuild:
-                            # Preserve all indexes that are NOT on dedup_key alone
-                            non_dedup_index_sqls = []
-                            raw_indexes = connection.execute(sa_text(
-                                "SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name='notification' AND sql IS NOT NULL"
-                            )).fetchall()
-                            for idx_name, idx_sql in raw_indexes:
-                                idx_cols = [row[2] for row in connection.execute(sa_text(f"PRAGMA index_info('{idx_name}')")).fetchall()]
-                                if idx_cols != ['dedup_key']:
-                                    non_dedup_index_sqls.append(idx_sql)
+                                cols_str = ", ".join(f'"{c}"' for c in notif_columns)
 
-                            create_sql = connection.execute(sa_text(
-                                "SELECT sql FROM sqlite_master WHERE type='table' AND name='notification'"
-                            )).fetchone()[0]
+                                connection.execute(sa_text("PRAGMA foreign_keys = OFF"))
+                                connection.execute(sa_text("ALTER TABLE notification RENAME TO _notification_old"))
+                                connection.execute(sa_text(new_sql))
+                                connection.execute(sa_text(f"INSERT INTO notification ({cols_str}) SELECT {cols_str} FROM _notification_old"))
+                                connection.execute(sa_text("DROP TABLE _notification_old"))
+                                connection.execute(sa_text("PRAGMA foreign_keys = ON"))
 
-                            lines = create_sql.splitlines()
-                            new_lines = []
-                            for line in lines:
-                                if re.search(r'\bUNIQUE\s*\(\s*["`\[]?dedup_key["`\]]?\s*\)', line, re.IGNORECASE):
-                                    continue
-                                elif re.search(r'\bdedup_key\b', line, re.IGNORECASE) and not re.search(r'^\s*CONSTRAINT\b', line, re.IGNORECASE):
-                                    line = re.sub(r'\bUNIQUE\b', '', line, flags=re.IGNORECASE)
-                                    new_lines.append(line)
-                                else:
-                                    new_lines.append(line)
+                                for idx_sql in non_dedup_index_sqls:
+                                    connection.execute(sa_text(idx_sql))
 
-                            new_sql = "\n".join(new_lines)
-                            new_sql = re.sub(r',\s*\)', '\n)', new_sql)
+                            connection.execute(sa_text("CREATE INDEX IF NOT EXISTS ix_notification_dedup_key ON notification (dedup_key)"))
 
-                            cols_str = ", ".join(f'"{c}"' for c in notif_columns)
+                        connection.commit()
+                    logger.info("Local SQLite schema initialized/verified: %s", mask_database_url(db_uri))
+                except Exception as e:
+                    safe_err = sanitize_db_error(e)
+                    logger.error("Local SQLite initialization error: %s", safe_err)
+                    raise RuntimeError(f"SQLite initialization failed: {safe_err}") from None
 
-                            connection.execute(sa_text("PRAGMA foreign_keys = OFF"))
-                            connection.execute(sa_text("ALTER TABLE notification RENAME TO _notification_old"))
-                            connection.execute(sa_text(new_sql))
-                            connection.execute(sa_text(f"INSERT INTO notification ({cols_str}) SELECT {cols_str} FROM _notification_old"))
-                            connection.execute(sa_text("DROP TABLE _notification_old"))
-                            connection.execute(sa_text("PRAGMA foreign_keys = ON"))
+    else:
+        # ----------------------------------------------------------------------
+        # PostgreSQL / Supabase Production Environment Handler
+        # db.create_all() is strictly prohibited.
+        # Alembic/Flask-Migrate is the exclusive authoritative migration tool.
+        # Startup verifies existing schema in READ-ONLY mode.
+        # ----------------------------------------------------------------------
+        if not is_testing and not is_cli_migration:
+            with app.app_context():
+                try:
+                    with db.engine.connect() as connection:
+                        inspector = sa_inspect(connection)
+                        existing_tables = set(inspector.get_table_names(schema="public" if not is_sqlite else None))
 
-                            for idx_sql in non_dedup_index_sqls:
-                                connection.execute(sa_text(idx_sql))
+                    required_tables = {
+                        "committee_member",
+                        "complaint",
+                        "complaint_evidence",
+                        "complaint_status_history",
+                        "investigation_action",
+                        "notification"
+                    }
+                    missing_tables = required_tables - existing_tables
+                    if missing_tables:
+                        err_msg = (
+                            f"Database schema is incomplete or uninitialized. Missing required tables: {sorted(missing_tables)}. "
+                            "Run 'python -m flask --app grievai_app db upgrade' to apply migrations."
+                        )
+                        logger.error(err_msg)
+                        raise RuntimeError(err_msg)
 
-                        connection.execute(sa_text("CREATE INDEX IF NOT EXISTS ix_notification_dedup_key ON notification (dedup_key)"))
+                    logger.info("Database schema verified (read-only): %s", mask_database_url(db_uri))
+                except RuntimeError:
+                    raise
+                except Exception as e:
+                    safe_err = sanitize_db_error(e)
+                    logger.error("Database connection/verification failed: %s", safe_err)
+                    raise RuntimeError(f"Database connection failed: {safe_err}") from None
 
-                connection.commit()
-            logger.info("Database schema initialized/verified.")
-        except Exception as e:
-            logger.error("Database schema migration error: %s", str(e), exc_info=True)
-            raise RuntimeError(f"Database schema migration failed: {e}") from e
+    # --------------------------------------------------------------------------
+    # Reminder Scheduler Daemon
+    # Strictly suppressed during testing, CLI commands, or when explicitly disabled
+    # --------------------------------------------------------------------------
+    disable_scheduler = app.config.get("DISABLE_REMINDER_SCHEDULER")
+    if disable_scheduler is None:
+        disable_scheduler = os.getenv("DISABLE_REMINDER_SCHEDULER", "False")
+    if isinstance(disable_scheduler, str):
+        disable_scheduler = disable_scheduler.lower() in ("true", "1", "yes")
 
-        # Start Reminder Scheduler Daemon (unless testing or explicitly disabled)
-        disable_scheduler = app.config.get("DISABLE_REMINDER_SCHEDULER")
-        if disable_scheduler is None:
-            disable_scheduler = os.getenv("DISABLE_REMINDER_SCHEDULER", "False")
-        if isinstance(disable_scheduler, str):
-            disable_scheduler = disable_scheduler.lower() in ("true", "1", "yes")
-
-        if not app.config.get("TESTING") and not disable_scheduler:
-            start_reminder_scheduler(app)
+    if not is_testing and not disable_scheduler and not is_cli_migration:
+        start_reminder_scheduler(app)
 
     return app
