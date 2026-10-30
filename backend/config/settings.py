@@ -158,7 +158,9 @@ except OSError:
 # Evidence Storage Backend Configuration ('local' or 'supabase')
 STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local").lower()
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
-SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+_raw_supabase_key = (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SECRET_KEY") or "").strip()
+SUPABASE_SERVICE_ROLE_KEY = _raw_supabase_key
+SUPABASE_SECRET_KEY = _raw_supabase_key
 SUPABASE_STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "complaint-evidence").strip()
 
 # Strict Student Email Pattern: ^vh[0-9]+@velhightech\.com$

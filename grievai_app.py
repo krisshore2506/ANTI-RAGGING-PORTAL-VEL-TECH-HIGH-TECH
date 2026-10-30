@@ -19,6 +19,11 @@ from backend.config.settings import (
     IS_PRODUCTION,
     IS_VERCEL,
     EVIDENCE_UPLOAD_FOLDER,
+    STORAGE_BACKEND,
+    SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_SECRET_KEY,
+    SUPABASE_STORAGE_BUCKET,
     STUDENT_EMAIL_REGEX,
     SMTP_EMAIL,
     SMTP_PASSWORD,
@@ -89,7 +94,10 @@ from backend.services.evidence_service import (
     ALLOWED_EXTENSIONS,
     format_file_size,
     inspect_file_signature,
-    save_uploaded_evidence
+    save_uploaded_evidence,
+    get_supabase_storage_headers,
+    upload_to_supabase_storage,
+    fetch_evidence_file_stream
 )
 from backend.services.notification_service import (
     create_notification,

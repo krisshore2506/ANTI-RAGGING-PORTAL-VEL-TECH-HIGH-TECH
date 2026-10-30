@@ -18,6 +18,7 @@ from backend.config.settings import (
     STORAGE_BACKEND,
     SUPABASE_URL,
     SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_SECRET_KEY,
     SUPABASE_STORAGE_BUCKET,
     logger
 )
@@ -92,29 +93,74 @@ def inspect_file_signature(ext, header, is_voice=False):
     return None, None
 
 
+def get_supabase_storage_headers(custom_key=None, extra_headers=None):
+    """
+    Constructs authentication headers for the Supabase Storage REST API.
+
+    - For SUPABASE_SECRET_KEY ('sb_secret_...' opaque key format):
+      Sends ONLY 'apikey: <secret key>'. Does NOT send 'Authorization: Bearer <key>'.
+    - For legacy SUPABASE_SERVICE_ROLE_KEY JWT credentials (e.g. 'eyJ...'):
+      Retains backward compatibility by sending both 'apikey' and 'Authorization: Bearer <key>'.
+    """
+    import backend.config.settings as s
+    key = (
+        custom_key
+        or getattr(s, "SUPABASE_SECRET_KEY", "")
+        or getattr(s, "SUPABASE_SERVICE_ROLE_KEY", "")
+        or SUPABASE_SECRET_KEY
+        or SUPABASE_SERVICE_ROLE_KEY
+    ).strip()
+
+    if key.startswith("sb_secret_"):
+        headers = {
+            "apikey": key,
+        }
+    else:
+        headers = {
+            "apikey": key,
+            "Authorization": f"Bearer {key}",
+        }
+
+    if extra_headers:
+        headers.update(extra_headers)
+    return headers
+
+
 def upload_to_supabase_storage(file_bytes: bytes, storage_filename: str, mime_type: str) -> bool:
     """
     Uploads file content to a private Supabase Storage bucket via the backend REST API.
-    Never exposes public URLs or service-role keys.
+    Sends 'apikey' only for new 'sb_secret_...' keys, and dual headers for legacy 'service_role' JWTs.
+    Never exposes public URLs or secret keys.
     """
-    if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY):
+    import backend.config.settings as s
+    url_base = getattr(s, "SUPABASE_URL", SUPABASE_URL).strip()
+    key = (getattr(s, "SUPABASE_SERVICE_ROLE_KEY", "") or getattr(s, "SUPABASE_SECRET_KEY", "") or SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY).strip()
+    bucket = getattr(s, "SUPABASE_STORAGE_BUCKET", SUPABASE_STORAGE_BUCKET).strip()
+
+    if not (url_base and key):
         return False
     try:
-        url = f"{SUPABASE_URL.rstrip('/')}/storage/v1/object/{SUPABASE_STORAGE_BUCKET}/{storage_filename}"
-        headers = {
-            "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
-            "Content-Type": mime_type,
-            "x-upsert": "true"
-        }
+        url = f"{url_base.rstrip('/')}/storage/v1/object/{bucket}/{storage_filename}"
+        headers = get_supabase_storage_headers(
+            custom_key=key,
+            extra_headers={
+                "Content-Type": mime_type,
+                "x-upsert": "true"
+            }
+        )
         resp = requests.post(url, headers=headers, data=file_bytes, timeout=15)
         if resp.status_code in (200, 201):
-            logger.info("Uploaded evidence %s to Supabase Storage bucket '%s'.", storage_filename, SUPABASE_STORAGE_BUCKET)
+            logger.info("Uploaded evidence %s to Supabase Storage bucket '%s'.", storage_filename, bucket)
             return True
         else:
-            logger.error("Supabase Storage upload failed (status %s): %s", resp.status_code, resp.text)
+            safe_resp = re.sub(r'sb_secret_[A-Za-z0-9_\-\.]+', '***', resp.text)
+            safe_resp = re.sub(r'(Bearer\s+)[A-Za-z0-9_\-\.]+', r'***', safe_resp)
+            logger.error("Supabase Storage upload failed (status %s): %s", resp.status_code, safe_resp)
             return False
     except Exception as e:
-        logger.error("Supabase Storage upload exception: %s", str(e))
+        safe_err = re.sub(r'sb_secret_[A-Za-z0-9_\-\.]+', '***', str(e))
+        safe_err = re.sub(r'(Bearer\s+)[A-Za-z0-9_\-\.]+', r'***', safe_err)
+        logger.error("Supabase Storage upload exception: %s", safe_err)
         return False
 
 
@@ -122,6 +168,7 @@ def fetch_evidence_file_stream(storage_filename: str):
     """
     Retrieves evidence file content for streaming.
     Checks local filesystem first, then falls back to Supabase Storage if configured.
+    Sends 'apikey' only for new 'sb_secret_...' keys, and dual headers for legacy 'service_role' JWTs.
     Returns (file_like_object, bool_is_memory) or (None, False) if not found.
     """
     safe_name = os.path.basename(storage_filename)
@@ -131,17 +178,24 @@ def fetch_evidence_file_stream(storage_filename: str):
         return open(local_path, "rb"), False
 
     # Fallback to Supabase Storage
-    if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
+    import backend.config.settings as s
+    url_base = getattr(s, "SUPABASE_URL", SUPABASE_URL).strip()
+    key = (getattr(s, "SUPABASE_SERVICE_ROLE_KEY", "") or getattr(s, "SUPABASE_SECRET_KEY", "") or SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY).strip()
+    bucket = getattr(s, "SUPABASE_STORAGE_BUCKET", SUPABASE_STORAGE_BUCKET).strip()
+
+    if url_base and key:
         try:
-            url = f"{SUPABASE_URL.rstrip('/')}/storage/v1/object/authenticated/{SUPABASE_STORAGE_BUCKET}/{safe_name}"
-            headers = {"Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}"}
+            url = f"{url_base.rstrip('/')}/storage/v1/object/authenticated/{bucket}/{safe_name}"
+            headers = get_supabase_storage_headers(custom_key=key)
             resp = requests.get(url, headers=headers, timeout=15, stream=True)
             if resp.status_code == 200:
                 return io.BytesIO(resp.content), True
             else:
                 logger.warning("Failed to fetch from Supabase Storage (status %s) for %s", resp.status_code, safe_name)
         except Exception as e:
-            logger.error("Error fetching evidence from Supabase Storage: %s", str(e))
+            safe_err = re.sub(r'sb_secret_[A-Za-z0-9_\-\.]+', '***', str(e))
+            safe_err = re.sub(r'(Bearer\s+)[A-Za-z0-9_\-\.]+', r'***', safe_err)
+            logger.error("Error fetching evidence from Supabase Storage: %s", safe_err)
 
     return None, False
 
@@ -182,7 +236,11 @@ def save_uploaded_evidence(file_obj, complaint_id, is_voice=False):
     file_size = os.path.getsize(dest_path)
 
     # If Supabase Storage is enabled, upload copy to private bucket
-    if STORAGE_BACKEND == "supabase" and SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
+    import backend.config.settings as s
+    backend_mode = getattr(s, "STORAGE_BACKEND", STORAGE_BACKEND)
+    url_base = getattr(s, "SUPABASE_URL", SUPABASE_URL)
+    key = getattr(s, "SUPABASE_SERVICE_ROLE_KEY", "") or getattr(s, "SUPABASE_SECRET_KEY", "") or SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY
+    if backend_mode == "supabase" and url_base and key:
         with open(dest_path, "rb") as f:
             file_bytes = f.read()
         upload_to_supabase_storage(file_bytes, storage_name, mime_type)

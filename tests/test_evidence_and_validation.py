@@ -4,13 +4,20 @@ Phase 3 (Complaint Evidence Uploads & Security), Phase 4 (Notifications & Schedu
 and Phase 5 (Template Footers, Logo Aspect Ratio, and Zero-Emoji Compliance).
 """
 
-import unittest
 import os
+import sys
 import io
 import re
 import shutil
 import tempfile
+import unittest
 from unittest.mock import patch
+
+# Set isolated test environment variables before importing app
+os.environ.setdefault("SECRET_KEY", "test-secret-key-32-chars-minimum-length-for-testing")
+os.environ.setdefault("ADMIN_EMAIL", "admin@velhightech.com")
+os.environ.setdefault("ADMIN_PASSWORD", "AdminSecurePass123")
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
 import grievai_app
 from grievai_app import (
@@ -427,6 +434,187 @@ class TestNotificationPreservation(BaseEvidenceTestCase):
         c2 = process_pending_action_reminders()
         # Second run should generate 0 duplicates
         self.assertEqual(c2, 0)
+
+
+
+
+class TestSupabaseStorageHeadersAndIntegration(BaseEvidenceTestCase):
+    """Verify Supabase Storage REST API authentication headers and private file handling."""
+
+    def test_get_supabase_storage_headers_with_sb_secret_key(self):
+        """Verify headers contain ONLY 'apikey' and NO 'Authorization: Bearer' for new sb_secret_ key format."""
+        from backend.services.evidence_service import get_supabase_storage_headers
+        test_key = "sb_secret_test_mock_secret_key_12345"
+        headers = get_supabase_storage_headers(custom_key=test_key)
+        self.assertEqual(headers.get("apikey"), test_key)
+        self.assertNotIn("Authorization", headers)
+        self.assertIsNone(headers.get("Authorization"))
+
+    def test_get_supabase_storage_headers_with_legacy_jwt(self):
+        """Verify headers contain both 'apikey' and 'Authorization: Bearer' for legacy service_role JWT."""
+        from backend.services.evidence_service import get_supabase_storage_headers
+        legacy_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock_payload.mock_signature"
+        headers = get_supabase_storage_headers(custom_key=legacy_key)
+        self.assertEqual(headers["apikey"], legacy_key)
+        self.assertEqual(headers["Authorization"], f"Bearer {legacy_key}")
+
+    @patch("backend.services.evidence_service.requests.post")
+    def test_upload_to_supabase_storage_sends_apikey_only_for_sb_secret(self, mock_post):
+        """Verify upload_to_supabase_storage sends apikey only (no Authorization header) with sb_secret_ key."""
+        from backend.services.evidence_service import upload_to_supabase_storage
+        mock_resp = unittest.mock.MagicMock()
+        mock_resp.status_code = 200
+        mock_post.return_value = mock_resp
+
+        test_key = "sb_secret_my_upload_key_abc"
+        with patch("backend.config.settings.SUPABASE_URL", "https://demo-project.supabase.co"), \
+             patch("backend.config.settings.SUPABASE_SECRET_KEY", test_key), \
+             patch("backend.config.settings.SUPABASE_SERVICE_ROLE_KEY", test_key), \
+             patch("backend.config.settings.SUPABASE_STORAGE_BUCKET", "complaint-evidence"):
+
+            success = upload_to_supabase_storage(b"dummy_bytes", "evidence_uuid123.jpg", "image/jpeg")
+            self.assertTrue(success)
+            self.assertTrue(mock_post.called)
+
+            call_url = mock_post.call_args[0][0]
+            call_headers = mock_post.call_args[1]["headers"]
+
+            self.assertEqual(call_url, "https://demo-project.supabase.co/storage/v1/object/complaint-evidence/evidence_uuid123.jpg")
+            self.assertEqual(call_headers["apikey"], test_key)
+            self.assertNotIn("Authorization", call_headers)
+            self.assertEqual(call_headers["Content-Type"], "image/jpeg")
+            self.assertEqual(call_headers["x-upsert"], "true")
+
+    @patch("backend.services.evidence_service.requests.post")
+    def test_upload_to_supabase_storage_retains_legacy_jwt_headers(self, mock_post):
+        """Verify upload_to_supabase_storage retains both apikey and Bearer Authorization for legacy service_role JWT."""
+        from backend.services.evidence_service import upload_to_supabase_storage
+        mock_resp = unittest.mock.MagicMock()
+        mock_resp.status_code = 200
+        mock_post.return_value = mock_resp
+
+        legacy_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.legacy_jwt_upload"
+        with patch("backend.config.settings.SUPABASE_URL", "https://demo-project.supabase.co"), \
+             patch("backend.config.settings.SUPABASE_SECRET_KEY", ""), \
+             patch("backend.config.settings.SUPABASE_SERVICE_ROLE_KEY", legacy_key), \
+             patch("backend.config.settings.SUPABASE_STORAGE_BUCKET", "complaint-evidence"):
+
+            success = upload_to_supabase_storage(b"dummy_bytes", "evidence_uuid456.jpg", "image/jpeg")
+            self.assertTrue(success)
+            self.assertTrue(mock_post.called)
+
+            call_headers = mock_post.call_args[1]["headers"]
+            self.assertEqual(call_headers["apikey"], legacy_key)
+            self.assertEqual(call_headers["Authorization"], f"Bearer {legacy_key}")
+
+    @patch("backend.services.evidence_service.requests.get")
+    def test_fetch_evidence_file_stream_sends_apikey_only_for_sb_secret(self, mock_get):
+        """Verify fetch_evidence_file_stream sends apikey only (no Authorization header) with sb_secret_ key."""
+        from backend.services.evidence_service import fetch_evidence_file_stream
+        mock_resp = unittest.mock.MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.content = b"remote_file_content_bytes"
+        mock_get.return_value = mock_resp
+
+        test_key = "sb_secret_my_fetch_key_xyz"
+        with patch("backend.config.settings.SUPABASE_URL", "https://demo-project.supabase.co"), \
+             patch("backend.config.settings.SUPABASE_SECRET_KEY", test_key), \
+             patch("backend.config.settings.SUPABASE_SERVICE_ROLE_KEY", test_key), \
+             patch("backend.config.settings.SUPABASE_STORAGE_BUCKET", "complaint-evidence"):
+
+            stream, is_memory = fetch_evidence_file_stream("non_existent_local_file.jpg")
+            self.assertTrue(is_memory)
+            self.assertIsNotNone(stream)
+            self.assertEqual(stream.read(), b"remote_file_content_bytes")
+
+            call_url = mock_get.call_args[0][0]
+            call_headers = mock_get.call_args[1]["headers"]
+
+            self.assertEqual(call_url, "https://demo-project.supabase.co/storage/v1/object/authenticated/complaint-evidence/non_existent_local_file.jpg")
+            self.assertEqual(call_headers["apikey"], test_key)
+            self.assertNotIn("Authorization", call_headers)
+
+    @patch("backend.services.evidence_service.requests.get")
+    def test_fetch_evidence_file_stream_retains_legacy_jwt_headers(self, mock_get):
+        """Verify fetch_evidence_file_stream retains both apikey and Bearer Authorization for legacy service_role JWT."""
+        from backend.services.evidence_service import fetch_evidence_file_stream
+        mock_resp = unittest.mock.MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.content = b"legacy_remote_bytes"
+        mock_get.return_value = mock_resp
+
+        legacy_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.legacy_jwt_fetch"
+        with patch("backend.config.settings.SUPABASE_URL", "https://demo-project.supabase.co"), \
+             patch("backend.config.settings.SUPABASE_SECRET_KEY", ""), \
+             patch("backend.config.settings.SUPABASE_SERVICE_ROLE_KEY", legacy_key), \
+             patch("backend.config.settings.SUPABASE_STORAGE_BUCKET", "complaint-evidence"):
+
+            stream, is_memory = fetch_evidence_file_stream("legacy_local_file.jpg")
+            self.assertTrue(is_memory)
+            self.assertIsNotNone(stream)
+
+            call_headers = mock_get.call_args[1]["headers"]
+            self.assertEqual(call_headers["apikey"], legacy_key)
+            self.assertEqual(call_headers["Authorization"], f"Bearer {legacy_key}")
+
+    @patch("backend.services.evidence_service.requests.get")
+    def test_evidence_route_streams_from_supabase_for_authorized_student(self, mock_get):
+        """Verify /evidence/<id> fetches and streams from Supabase with apikey only and rejects unauthorized students."""
+        c = Complaint(
+            student_email="vh13838@velhightech.com",
+            complaint_text="Supabase evidence test incident",
+            department="Campus Premises",
+            status="Open"
+        )
+        db.session.add(c)
+        db.session.commit()
+
+        ev = ComplaintEvidence(
+            complaint_id=c.id,
+            file_type="photo",
+            original_filename="student_evidence.jpg",
+            storage_filename="remote_only_storage_name.jpg",
+            mime_type="image/jpeg",
+            file_size_bytes=1024
+        )
+        db.session.add(ev)
+        db.session.commit()
+
+        mock_resp = unittest.mock.MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.content = b"\xff\xd8\xff\xe0\x00\x10JFIF" + (b"\x00" * 50)
+        mock_get.return_value = mock_resp
+
+        test_key = "sb_secret_verified_secret_key"
+        with patch("backend.config.settings.SUPABASE_URL", "https://demo-project.supabase.co"), \
+             patch("backend.config.settings.SUPABASE_SECRET_KEY", test_key), \
+             patch("backend.config.settings.SUPABASE_SERVICE_ROLE_KEY", test_key), \
+             patch("backend.config.settings.SUPABASE_STORAGE_BUCKET", "complaint-evidence"):
+
+            # 1. Authorized student accessing evidence
+            with self.client.session_transaction() as sess:
+                sess["verified"] = True
+                sess["email"] = "vh13838@velhightech.com"
+
+            resp = self.client.get(f"/evidence/{ev.id}")
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(resp.content_type, "image/jpeg")
+            self.assertEqual(resp.data, mock_resp.content)
+            self.assertTrue(mock_get.called)
+
+            call_headers = mock_get.call_args[1]["headers"]
+            self.assertEqual(call_headers["apikey"], test_key)
+            self.assertNotIn("Authorization", call_headers)
+
+            # 2. Unauthorized student blocked before reaching Supabase
+            mock_get.reset_mock()
+            with self.client.session_transaction() as sess:
+                sess["verified"] = True
+                sess["email"] = "vh99999@velhightech.com"
+
+            resp_unauth = self.client.get(f"/evidence/{ev.id}")
+            self.assertEqual(resp_unauth.status_code, 403)
+            self.assertFalse(mock_get.called)
 
 
 if __name__ == "__main__":
